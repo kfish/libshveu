@@ -84,6 +84,16 @@ extern "C" {
  *
  */
 
+/**
+ * Open a VEU device.
+ */
+int sh_veu_open(void);
+
+/**
+ * Close a VEU device.
+ */
+void sh_veu_close(void);
+
 #include <shveu/veu_colorspace.h>
 
 #ifdef __cplusplus

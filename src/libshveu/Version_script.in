@@ -8,6 +8,8 @@
 @PACKAGE@.so.0.0
 {
         global:
+		sh_veu_open;
+		sh_veu_close;
 		sh_veu_operation;
 		sh_veu_rgb565_to_nv12;
 		sh_veu_nv12_to_rgb565;
