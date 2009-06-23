@@ -1,0 +1,12 @@
+prefix=
+exec_prefix=
+libdir=${pcfiledir}/src
+includedir=${pcfiledir}/include
+
+Name: shveu uninstalled
+Description: A library for controlling SH-Mobile VEU
+Requires:
+Version: @VERSION@
+Libs: -L${libdir} -lshveu
+Libs.private:
+Cflags: -I${includedir}

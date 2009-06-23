@@ -1,0 +1,17 @@
+#
+# Export file for libshveu
+#
+# Only the symbols listed in the global section will be callable from
+# applications linking to libuiomux.
+#
+
+@PACKAGE@.so.0.0
+{
+        global:
+		sh_veu_operation;
+		sh_veu_rgb565_to_nv12;
+		sh_veu_nv12_to_rgb565;
+		
+        local:
+                *;
+};
