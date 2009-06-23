@@ -245,6 +245,7 @@ include/shveu/Makefile
 src/Makefile
 src/libshveu/Version_script
 src/libshveu/Makefile
+src/examples/Makefile
 shveu.pc
 shveu-uninstalled.pc
 ])

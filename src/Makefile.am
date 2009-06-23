@@ -1,1 +1,1 @@
-SUBDIRS = libshveu
+SUBDIRS = libshveu examples
