@@ -86,6 +86,7 @@ extern "C" {
 
 /**
  * Open a VEU device.
+ * \retval 0 Success
  */
 int shveu_open(void);
 

@@ -9,7 +9,7 @@ Project plan: libshveu
 
  E2. Make a re-usable library from the existing code
  E2.1 Unique symbol naming etc. (Conrad) DONE 2009-06-24
- E2.2 API documentation (Phil, Conrad)
+ E2.2 API documentation (Phil, Conrad) DONE 2009-06-24
  E2.3 Simple file i/o example (??)
 
  E3. AIO interface
