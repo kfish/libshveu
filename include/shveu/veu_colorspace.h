@@ -23,29 +23,20 @@
 #define __VEU_COLORSPACE_H__
 
 enum {
-	NO_ROT=0,
-	ROT_90,
+	SHVEU_NO_ROT=0,
+	SHVEU_ROT_90,
 };
 
 /* Image formats */
 enum {
-	RGB565=0,
-	YCbCr420,
-	YCbCr422,
+	SHVEU_RGB565=0,
+	SHVEU_YCbCr420,
+	SHVEU_YCbCr422,
 };
-#define FMT_MASK (RGB565 | YCbCr420 | YCbCr422)
-#define YCBCR_COMP_RANGE (0 << 16)
-#define YCBCR_FULL_RANGE (1 << 16)
-#define YCBCR_BT601      (0 << 17)
-#define YCBCR_BT709      (1 << 17)
-
-int sh_veu_open(void);
-
-void sh_veu_close(void);
 
 /* Perform (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces */
 int
-sh_veu_operation(
+shveu_operation(
 	unsigned int veu_index,
 	unsigned char *src_py,
 	unsigned char *src_pc,
@@ -62,7 +53,7 @@ sh_veu_operation(
 	int rotate);
 
 /* Perform scale from RG565 to YCbCr 4:2:0 surface */
-int sh_veu_rgb565_to_nv12(
+int shveu_rgb565_to_nv12(
 	unsigned char *rgb565_in,
 	unsigned char *y_out,
 	unsigned char *c_out,
@@ -71,7 +62,7 @@ int sh_veu_rgb565_to_nv12(
 
 /* Perform color conversion & crop from YCbCr 4:2:0 to RG565 surface */
 int
-sh_veu_nv12_to_rgb565(
+shveu_nv12_to_rgb565(
 	unsigned char *y_in,
 	unsigned char *c_in,
 	unsigned char *rgb565_out,

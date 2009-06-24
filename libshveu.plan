@@ -1,15 +1,16 @@
-Project plan
-------------
+Project plan: libshveu
+----------------------
 
- 1 Multiple VEU handling:
- 1.1. use globals for veu_operation(), pass in an index as an integer (Phil)
- 1.2. modify uiomux to choose a VEU if many are available, and switch
-     veu_operation() to use a uiomux_t (Conrad)
+ E1 Multiple VEU handling:
+ E1.1. use globals for veu_operation(), pass in an index as an integer
+       (Phil) DONE 2009-06-16
+ E1.2. modify uiomux to choose a VEU if many are available, and switch
+       veu_operation() to use a uiomux_t (Conrad) [depend: U4]
 
- 2. Make a re-usable library from the existing code
- 2.1 Unique symbol naming etc. (Conrad)
- 2.2 API documentation (Phil, Conrad)
- 2.3 Simple file i/o example (??)
+ E2. Make a re-usable library from the existing code
+ E2.1 Unique symbol naming etc. (Conrad) DONE 2009-06-24
+ E2.2 API documentation (Phil, Conrad)
+ E2.3 Simple file i/o example (??)
 
- 3. AIO interface
- 3.1 specify, plan an aio interface (Phil)
+ E3. AIO interface
+ E3.1 specify, plan an aio interface (Phil)

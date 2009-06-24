@@ -87,12 +87,12 @@ extern "C" {
 /**
  * Open a VEU device.
  */
-int sh_veu_open(void);
+int shveu_open(void);
 
 /**
  * Close a VEU device.
  */
-void sh_veu_close(void);
+void shveu_close(void);
 
 #include <shveu/veu_colorspace.h>
 

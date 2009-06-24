@@ -1,5 +1,5 @@
 /*
- * libshcodecs: A library for controlling SH-Mobile hardware codecs
+ * libshveu: A library for controlling SH-Mobile VEU
  * Copyright (C) 2009 Renesas Technology Corp.
  *
  * This library is free software; you can redistribute it and/or
@@ -43,6 +43,12 @@
 #include <errno.h>
 
 #include "shveu/veu_colorspace.h"
+
+#define FMT_MASK (SHVEU_RGB565 | SHVEU_YCbCr420 | SHVEU_YCbCr422)
+#define YCBCR_COMP_RANGE (0 << 16)
+#define YCBCR_FULL_RANGE (1 << 16)
+#define YCBCR_BT601      (0 << 17)
+#define YCBCR_BT709      (1 << 17)
 
 #define SH_VEU_RESERVE_TOP (512 << 10)
 #define YUV_COLOR
@@ -555,7 +561,7 @@ static void sh_veu_destroy(void)
 }
 
 
-int sh_veu_open(void)
+int shveu_open(void)
 {
 	sh_veu_probe(0, 0);
 	sh_veu_init();
@@ -563,12 +569,12 @@ int sh_veu_open(void)
 	return 0;
 }
 
-void sh_veu_close(void)
+void shveu_close(void)
 {
 }
 
 int
-sh_veu_operation(
+shveu_operation(
 	unsigned int veu_index,
 	unsigned char *src_py,
 	unsigned char *src_pc,
@@ -609,7 +615,7 @@ sh_veu_operation(
 
 	write_reg(ump, (src_height << 16) | src_width, VESSR);
 
-	if (src_fmt == RGB565)
+	if (src_fmt == SHVEU_RGB565)
 		src_pitch *= 2;
 	write_reg(ump, src_pitch, VESWR);
 	write_reg(ump, 0, VBSSR);	/* not using bundle mode */
@@ -622,7 +628,7 @@ sh_veu_operation(
 		int src_density = 2;	/* for RGB565 and YCbCr422 */
 		int offset;
 
-		if ((src_fmt & FMT_MASK) == YCbCr420)
+		if ((src_fmt & FMT_MASK) == SHVEU_YCbCr420)
 			src_density = 1;
 		offset = ((src_vblk-2)*16 + src_sidev) * src_density;
 
@@ -633,18 +639,18 @@ sh_veu_operation(
 		write_reg(ump, (unsigned long)dst_pc, VDACR);
 	}
 
-	if (dst_fmt == RGB565)
+	if (dst_fmt == SHVEU_RGB565)
 		dst_pitch *= 2;
 	write_reg(ump, dst_pitch, VEDWR);
 
 	/* byte/word swapping */
 	{
 		unsigned long vswpr = 0;
-		if (src_fmt == RGB565)
+		if (src_fmt == SHVEU_RGB565)
 			vswpr |= 0x6;
 		else
 			vswpr |= 0x7;
-		if (dst_fmt == RGB565)
+		if (dst_fmt == SHVEU_RGB565)
 			vswpr |= 0x60;
 		else
 			vswpr |= 0x70;
@@ -658,21 +664,21 @@ sh_veu_operation(
 	/* transform control */
 	{
 		unsigned long vtrcr = 0;
-		if ((src_fmt & FMT_MASK) == RGB565) {
+		if ((src_fmt & FMT_MASK) == SHVEU_RGB565) {
 			vtrcr |= VTRCR_RY_SRC_RGB;
 			vtrcr |= VTRCR_SRC_FMT_RGB565;
 		} else {
 			vtrcr |= VTRCR_RY_SRC_YCBCR;
-			if ((src_fmt & FMT_MASK) == YCbCr420)
+			if ((src_fmt & FMT_MASK) == SHVEU_YCbCr420)
 				vtrcr |= VTRCR_SRC_FMT_YCBCR420;
 			else
 				vtrcr |= VTRCR_SRC_FMT_YCBCR422;
 		}
 
-		if ((dst_fmt & FMT_MASK) == RGB565) {
+		if ((dst_fmt & FMT_MASK) == SHVEU_RGB565) {
 			vtrcr |= VTRCR_DST_FMT_RGB565;
 		} else {
-			if ((dst_fmt & FMT_MASK) == YCbCr420)
+			if ((dst_fmt & FMT_MASK) == SHVEU_YCbCr420)
 				vtrcr |= VTRCR_DST_FMT_YCBCR420;
 			else
 				vtrcr |= VTRCR_DST_FMT_YCBCR422;
@@ -749,7 +755,7 @@ sh_veu_operation(
 
 
 int
-sh_veu_rgb565_to_nv12 (
+shveu_rgb565_to_nv12 (
 	unsigned char *rgb565_in,
 	unsigned char *y_out,
 	unsigned char *c_out,
@@ -758,13 +764,13 @@ sh_veu_rgb565_to_nv12 (
 {
 	return sh_veu_operation(
 		0,
-		rgb565_in, NULL,  width, height, width, RGB565,
-		y_out,     c_out, width, height, width, YCbCr420,
+		rgb565_in, NULL,  width, height, width, SHVEU_RGB565,
+		y_out,     c_out, width, height, width, SHVEU_YCbCr420,
 		0);
 }
 
 int
-sh_veu_nv12_to_rgb565(
+shveu_nv12_to_rgb565(
 	unsigned char *y_in,
 	unsigned char *c_in,
 	unsigned char *rgb565_out,
@@ -775,8 +781,8 @@ sh_veu_nv12_to_rgb565(
 {
 	return sh_veu_operation(
 		0,
-		y_in,       c_in, width, height, pitch_in,  YCbCr420,
-		rgb565_out, NULL, width, height, pitch_out, RGB565,
+		y_in,       c_in, width, height, pitch_in,  SHVEU_YCbCr420,
+		rgb565_out, NULL, width, height, pitch_out, SHVEU_RGB565,
 		0);
 }
 
