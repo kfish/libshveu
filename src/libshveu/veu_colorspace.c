@@ -762,7 +762,7 @@ shveu_rgb565_to_nv12 (
 	unsigned long width,
 	unsigned long height)
 {
-	return sh_veu_operation(
+	return shveu_operation(
 		0,
 		rgb565_in, NULL,  width, height, width, SHVEU_RGB565,
 		y_out,     c_out, width, height, width, SHVEU_YCbCr420,
@@ -779,7 +779,7 @@ shveu_nv12_to_rgb565(
 	unsigned long pitch_in,
 	unsigned long pitch_out)
 {
-	return sh_veu_operation(
+	return shveu_operation(
 		0,
 		y_in,       c_in, width, height, pitch_in,  SHVEU_YCbCr420,
 		rgb565_out, NULL, width, height, pitch_out, SHVEU_RGB565,

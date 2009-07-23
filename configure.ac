@@ -25,7 +25,7 @@ AC_PREREQ(2.53)
 
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE(libshveu, 0.5.0)
+AM_INIT_AUTOMAKE(libshveu, 1.0.0)
 AM_CONFIG_HEADER(config.h)
 
 ################################################################################
