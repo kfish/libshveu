@@ -295,6 +295,7 @@ int main (int argc, char * argv[])
 	size_t input_size, output_size;
 	unsigned char * src_py, * src_pc, * dest_py, * dest_pc;
 	int veu_index=0;
+	int ret;
 
         int show_version = 0;
         int show_help = 0;
@@ -413,8 +414,14 @@ int main (int argc, char * argv[])
 	/* If the output size isn't given and can't be guessed, then default to
 	 * the input size (ie. no rescaling) */
 	if (output_w == -1 && output_h == -1) {
-                output_w = input_w;
-		output_h = input_h;
+		if (rotation == SHVEU_NO_ROT) {
+                	output_w = input_w;
+			output_h = input_h;
+		} else {
+			/* Swap width/height for rotation */
+			output_w = input_h;
+			output_h = input_w;
+		}
 	}
 
 	/* Check that all parameters are set */
@@ -489,11 +496,16 @@ int main (int argc, char * argv[])
 
         shveu_open ();
 
-	shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
-			            dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
-				    rotation);
+	ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
+			                  dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
+				          rotation);
 
         shveu_close ();
+
+	if (ret == -1) {
+		fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
+		goto exit_err;
+	}
 
 	/* Write output */
         if (outfilename == NULL || strcmp (outfilename, "-") == 0) {
