@@ -1,1 +1,1 @@
-SUBDIRS = libshveu examples
+SUBDIRS = libshveu tools
