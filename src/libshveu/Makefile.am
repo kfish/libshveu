@@ -11,7 +11,7 @@ AM_CFLAGS =
 # Libraries to build
 lib_LTLIBRARIES = libshveu.la
 
-noinst_HEADERS =
+noinst_HEADERS = shveu_regs.h
 
 libshveu_la_SOURCES = \
 	veu_colorspace.c
