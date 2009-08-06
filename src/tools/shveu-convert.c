@@ -294,6 +294,7 @@ int main (int argc, char * argv[])
         FILE * infile, * outfile;
 	size_t input_size, output_size;
 	unsigned char * src_py, * src_pc, * dest_py, * dest_pc;
+	int veu_index=0;
 
         int show_version = 0;
         int show_help = 0;
@@ -486,15 +487,13 @@ int main (int argc, char * argv[])
 	}
 	if (infile != stdin) fclose (infile);
 
-#if 0
         shveu_open ();
 
-	shveu_operation (veu_index, src_py, src_pc, input_w, input_h, 0, input_colorspace,
-			            dest_py, dest_pc, output_w, output_h, 0, output_colorspace,
-				    rotate);
+	shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
+			            dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
+				    rotation);
 
         shveu_close ();
-#endif
 
 	/* Write output */
         if (outfilename == NULL || strcmp (outfilename, "-") == 0) {
