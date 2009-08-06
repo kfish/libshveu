@@ -193,6 +193,27 @@ static off_t filesize (char * filename)
 	return statbuf.st_size;
 }
 
+static off_t imgsize (int colorspace, int w, int h)
+{
+	int n=0, d=1;
+
+        switch (colorspace) {
+        case SHVEU_RGB565:
+        case SHVEU_YCbCr422:
+                /* 2 bytes per pixel */
+                n=2; d=1;
+	       	break;
+       case SHVEU_YCbCr420:
+		/* 3/2 bytes per pixel */
+		n=3; d=2;
+        	break;
+       default:
+		return -1;
+        }
+
+	return (off_t)(w*h*n/d);
+}
+
 static int guess_colorspace (char * filename, int * c)
 {
         char * ext;
@@ -270,7 +291,9 @@ static int guess_size (char * filename, int colorspace, int * w, int * h)
 int main (int argc, char * argv[])
 {
         char * infilename = NULL, * outfilename = NULL;
-        int infd, outfd;
+        FILE * infile, * outfile;
+	size_t input_size, output_size;
+	unsigned char * src_py, * src_pc, * dest_py, * dest_pc;
 
         int show_version = 0;
         int show_help = 0;
@@ -398,11 +421,68 @@ int main (int argc, char * argv[])
 	printf ("Output size:\t\t%dx%d %s\n", output_w, output_h, show_size (output_w, output_h));
 	printf ("Rotation:\t\t%s\n", show_rotation (rotation));
 
+	input_size = imgsize (input_colorspace, input_w, input_h);
+	output_size = imgsize (output_colorspace, output_w, output_h);
+
+	/* Set up memory buffers */
+	src_py = malloc (input_size);
+	if (input_colorspace == SHVEU_RGB565) {
+	        src_pc = NULL;
+	} else {
+		src_pc = src_py + (input_w * input_h);
+	}
+
+	dest_py = malloc (output_size);
+	if (output_colorspace == SHVEU_RGB565) {
+	        dest_pc = NULL;
+	} else {
+		dest_pc = dest_py + (output_w * output_h);
+	}
+
+	/* Read input */
+        if (strcmp (infilename, "-") == 0) {
+	        infile = stdin;
+	} else {
+	        infile = fopen (infilename, "rb");
+		if (infile == NULL) {
+                        fprintf (stderr, "%s: unable to open input file %s\n",
+	                         progname, infilename);
+                        goto exit_err;
+		}
+	}
+	if (fread (src_py, 1, input_size, infile) != input_size) {
+			fprintf (stderr, "%s: error reading input file %s\n",
+				 progname, infilename);
+	}
+	if (infile != stdin) fclose (infile);
+
 #if 0
         shveu_open ();
 
+	shveu_operation (veu_index, src_py, src_pc, input_w, input_h, 0, input_colorspace,
+			            dest_py, dest_pc, output_w, output_h, 0, output_colorspace,
+				    rotate);
+
         shveu_close ();
 #endif
+
+	/* Write output */
+        if (outfilename == NULL || strcmp (outfilename, "-") == 0) {
+                outfile = stdout;
+        } else {
+                outfile = fopen (outfilename, "wb");
+                if (outfile == NULL) {
+                        fprintf (stderr, "%s: unable to open output file %s\n",
+	                         progname, outfilename);
+                        goto exit_err;
+                }
+        }
+
+	if (fwrite (dest_py, 1, output_size, outfile) != output_size) {
+			fprintf (stderr, "%s: error writing input file %s\n",
+				 progname, outfilename);
+	}
+	if (outfile != stdout) fclose (outfile);
 
 exit_ok:
         exit (0);
