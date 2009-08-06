@@ -298,6 +298,7 @@ int main (int argc, char * argv[])
         int show_version = 0;
         int show_help = 0;
         char * progname;
+	int error = 0;
 
         int c;
         char * optstring = "hvo:c:s:C:S:r";
@@ -414,6 +415,35 @@ int main (int argc, char * argv[])
                 output_w = input_w;
 		output_h = input_h;
 	}
+
+	/* Check that all parameters are set */
+	if (input_colorspace == -1) {
+		fprintf (stderr, "ERROR: Input colorspace unspecified\n");
+		error = 1;
+	}
+	if (input_w == -1) {
+		fprintf (stderr, "ERROR: Input width unspecified\n");
+		error = 1;
+	}
+	if (input_h == -1) {
+		fprintf (stderr, "ERROR: Input height unspecified\n");
+		error = 1;
+	}
+
+	if (output_colorspace == -1) {
+		fprintf (stderr, "ERROR: Output colorspace unspecified\n");
+		error = 1;
+	}
+	if (output_w == -1) {
+		fprintf (stderr, "ERROR: Output width unspecified\n");
+		error = 1;
+	}
+	if (output_h == -1) {
+		fprintf (stderr, "ERROR: Output height unspecified\n");
+		error = 1;
+	}
+
+	if (error) goto exit_err;
 
 	printf ("Input colorspace:\t%s\n", show_colorspace (input_colorspace));
 	printf ("Input size:\t\t%dx%d %s\n", input_w, input_h, show_size (input_w, input_h));
