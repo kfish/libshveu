@@ -48,8 +48,6 @@
 
 #define FMT_MASK (SHVEU_RGB565 | SHVEU_YCbCr420 | SHVEU_YCbCr422)
 
-//#define USE_THREADS
-
 static int fgets_with_openclose(char *fname, char *buf, size_t maxlen)
 {
 	FILE *fp;
@@ -209,8 +207,7 @@ static void set_scale(struct uio_map *ump, int vertical,
 	write_reg(ump, value, VRFSR);
 }
 
-/* global variables yuck */
-
+/* global variables */
 struct sh_veu_uio_device sh_veu_uio_dev;
 struct uio_map sh_veu_uio_mmio, sh_veu_uio_mem;
 
@@ -240,262 +237,10 @@ static int sh_veu_probe(int verbose, int force)
 	return ret;
 }
 
-//struct sh_veu_plane _src, _dst, _tmp;
-
-#ifdef USE_THREADS
-sem_t sh_veu_blocker;
-pthread_mutex_t sh_veu_busy;
-pthread_t sh_veu_thread;
-int sh_veu_frame;
-#endif
-
-//void *cached_data;
-
-//static int YOffs,UOffs,VOffs,UVOffs;
-
-
-#if 0
-static int sh_veu_do_copy(vidix_playback_t * info, int frame)
-{
-#if defined(YUV_COLOR)
-	int k;
-	unsigned char *u, *v;
-	unsigned short *uv;
-
-	/* hack: do software conversion of planar U and V
-	 *       to single interleaved UV plane.
-	 */
-
-#ifdef CACHED_UV
-	v = cached_data + info->offsets[frame] + VOffs;
-	u = cached_data + info->offsets[frame] + UOffs;
-#else
-	v = sh_veu_uio_mem.iomem + info->offsets[frame] + VOffs;
-	u = sh_veu_uio_mem.iomem + info->offsets[frame] + UOffs;
-#endif
-	uv = (unsigned char *) sh_veu_uio_mem.iomem +
-	    info->offsets[frame] + UVOffs;
-
-	for (k = 0; k < (UOffs / 2); k++)
-		uv[k] = v[k] | (u[k] << 8);
-#endif
-}
-#endif
-
-#if 0
-struct sh_veu_plane {
-	unsigned long width;
-	unsigned long height;
-	unsigned long stride;
-	unsigned long phys_addr_y;
-	unsigned long phys_addr_c;
-};
-
-static int sh_veu_do_blit(vidix_playback_t * info, int do_rgb,
-			  struct sh_veu_plane *src,
-			  struct sh_veu_plane *dst)
-{
-
-	write_reg(&sh_veu_uio_mmio, src->stride, VESWR);
-	write_reg(&sh_veu_uio_mmio, src->width | (src->height << 16),
-		  VESSR);
-	write_reg(&sh_veu_uio_mmio, 0, VBSSR);	/* not using bundle mode */
-
-	write_reg(&sh_veu_uio_mmio, dst->stride, VEDWR);
-	write_reg(&sh_veu_uio_mmio, dst->phys_addr_y, VDAYR);
-	write_reg(&sh_veu_uio_mmio, dst->phys_addr_c, VDACR);	/* unused for RGB */
-
-	if (do_rgb) {
-		write_reg(&sh_veu_uio_mmio, 0x66, VSWPR);
-		write_reg(&sh_veu_uio_mmio, (6 << 16) | (3 << 8) | 1,
-			  VTRCR);
-	} else {
-		write_reg(&sh_veu_uio_mmio, 0x67, VSWPR);
-		write_reg(&sh_veu_uio_mmio, (6 << 16) | (0 << 14) | 2 | 4,
-			  VTRCR);
-
-		if (sh_veu_uio_mmio.size > VBSRR) {	/* sh7723 */
-			write_reg(&sh_veu_uio_mmio, 0x0cc5, VMCR00);
-			write_reg(&sh_veu_uio_mmio, 0x0950, VMCR01);
-			write_reg(&sh_veu_uio_mmio, 0x0000, VMCR02);
-
-			write_reg(&sh_veu_uio_mmio, 0x397f, VMCR10);
-			write_reg(&sh_veu_uio_mmio, 0x0950, VMCR11);
-			write_reg(&sh_veu_uio_mmio, 0x3ccd, VMCR12);
-
-			write_reg(&sh_veu_uio_mmio, 0x0000, VMCR20);
-			write_reg(&sh_veu_uio_mmio, 0x0950, VMCR21);
-			write_reg(&sh_veu_uio_mmio, 0x1023, VMCR22);
-
-			write_reg(&sh_veu_uio_mmio, 0x00800010, VCOFFR);
-		}
-	}
-
-	set_scale(&sh_veu_uio_mmio, 0, src->width, dst->width);
-	set_scale(&sh_veu_uio_mmio, 1, src->height, dst->height);
-
-	write_reg(&sh_veu_uio_mmio, src->phys_addr_y, VSAYR);
-	write_reg(&sh_veu_uio_mmio, src->phys_addr_c, VSACR);	/* unused for RGB */
-
-	write_reg(&sh_veu_uio_mmio, 1, VEIER);	/* enable interrupt in VEU */
-
-	/* Enable interrupt in UIO driver */
-	{
-		unsigned long enable = 1;
-
-		write(sh_veu_uio_dev.fd, &enable, sizeof(u_long));
-	}
-
-	write_reg(&sh_veu_uio_mmio, 1, VESTR);	/* start operation */
-
-	/* Wait for an interrupt */
-	{
-		unsigned long n_pending;
-
-		read(sh_veu_uio_dev.fd, &n_pending, sizeof(u_long));
-	}
-
-	write_reg(&sh_veu_uio_mmio, 0x100, VEVTR);	/* ack int, write 0 to bit 0 */
-}
-#endif
-
-#if 0
-void sh_veu_setup_planes(vidix_playback_t * info,
-			 struct sh_veu_plane *src,
-			 struct sh_veu_plane *dst,
-			 struct sh_veu_plane *tmp)
-{
-	unsigned long addr;
-	char *envstr;
-
-	src->width = info->src.w;
-	src->height = info->src.h;
-	src->stride = (info->src.w + 15) & ~15;
-
-	dst->width = fbi.width;
-	dst->height = fbi.height;
-	dst->stride = fbi.line_length;
-
-	/* aspect ratio calculations hack - use mplayer info later */
-	if (src->width == 320 && src->height == 240) {
-		dst->width = 640;
-		dst->height = 472;
-	}
-
-	if (src->width == 640 && src->height == 480) {
-		dst->width = 640;
-		dst->height = 472;
-	}
-
-	tmp->width = 0;
-
-	envstr = getenv("sh_veu_mode");
-	envstr = envstr ? envstr : "";
-
-	while (dst->width == 800 && dst->height == 480) {
-		if (!strcmp(envstr, "buf=220x140")) {
-			tmp->width = 220;
-			tmp->height = 140;
-			break;
-		}
-
-		if (!strcmp(envstr, "buf=256x240")) {
-			tmp->width = 256;
-			tmp->height = 240;
-			dst->width = 800;
-			dst->height = 472;
-			break;
-		}
-
-		if (!strcmp(envstr, "buf=440x280")) {
-			tmp->width = 440;
-			tmp->height = 280;
-			break;
-		}
-
-		if (!strcmp(envstr, "buf=512x480")) {
-			tmp->width = 512;
-			tmp->height = 480;
-			dst->width = 800;
-			dst->height = 472;
-			break;
-		}
-		break;
-	}
-
-	/* center on frame buffer */
-	addr = fbi.address;
-	addr += ((fbi.width - dst->width) / 2) * (fbi.bpp / 8);
-	addr += dst->stride * ((fbi.height - dst->height) / 2);
-
-	dst->phys_addr_y = addr;
-
-	/* setup mid buffer */
-	tmp->stride = tmp->width * 2;
-	addr = sh_veu_uio_mem.address + sh_veu_uio_mem.size;
-	addr -= SH_VEU_RESERVE_TOP;
-	tmp->phys_addr_y = addr;
-
-	printf("stretching from %ldx%ld to %ldx%ld\n",
-	       src->width, src->height, dst->width, dst->height);
-
-	if (tmp->width)
-		printf("using %ldx%ld middle buffer\n", tmp->width,
-		       tmp->height);
-}
-#endif
-
-#if 0
-void sh_veu_draw(vidix_playback_t * info,
-		 int frame,
-		 struct sh_veu_plane *src,
-		 struct sh_veu_plane *dst, struct sh_veu_plane *tmp)
-{
-	unsigned long addr;
-
-	sh_veu_do_copy(info, frame);
-
-	addr = sh_veu_uio_mem.address + info->offsets[frame];
-	src->phys_addr_y = addr + YOffs;
-	src->phys_addr_c = addr + UVOffs;
-
-	if (tmp->width == 0) {
-		sh_veu_do_blit(info, 0, src, dst);
-	} else {
-		sh_veu_do_blit(info, 0, src, tmp);
-		sh_veu_do_blit(info, 1, tmp, dst);
-	}
-}
-
-#ifdef USE_THREADS
-
-void *sh_veu_thread_fn(void *arg)
-{
-	while (1) {
-		sem_wait(&sh_veu_blocker);
-
-		pthread_mutex_lock(&sh_veu_busy);
-
-		sh_veu_draw(&my_info, sh_veu_frame, &_src, &_dst, &_tmp);
-
-		pthread_mutex_unlock(&sh_veu_busy);
-	}
-
-	return NULL;
-}
-
-#endif
-
-#endif
-
 static int sh_veu_init(void)
 {
 	/* reset VEU */
 	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
-#ifdef USE_THREADS
-	pthread_mutex_init(&sh_veu_busy, NULL);
-	sem_init(&sh_veu_blocker, 0, 0);
-#endif
 	return 0;
 }
 
@@ -517,25 +262,24 @@ void shveu_close(void)
 }
 
 int
-shveu_operation(
+shveu_start(
 	unsigned int veu_index,
 	unsigned char *src_py,
 	unsigned char *src_pc,
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	int src_fmt,
+	E_VEU_FORMAT src_fmt,
 	unsigned char *dst_py,
 	unsigned char *dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	int dst_fmt,
-	int rotate)
+	E_VEU_FORMAT dst_fmt,
+	E_VEU_ROTATION rotate)
 {
-	/* Ignore veu_index as we onyl support one VEU at the moment */
+	/* Ignore veu_index as we only support one VEU at the moment */
 	struct uio_map *ump = &sh_veu_uio_mmio;
-	veu_index;
 
 #ifdef DEBUG
 	fprintf(stderr, "%s IN\n", __FUNCTION__);
@@ -640,7 +384,8 @@ shveu_operation(
 #endif
 	}
 
-	if (ump->size > VBSRR) {	/* VEU2H on SH7723 */
+	/* Is this a VEU2H on SH7723? */
+	if (ump->size > VBSRR) {
 		/* color conversion matrix */
 		write_reg(ump, 0x0cc5, VMCR00);
 		write_reg(ump, 0x0950, VMCR01);
@@ -665,7 +410,8 @@ shveu_operation(
 		write_reg(ump, 0, VFMCR);
 	}
 
-	write_reg(ump, 1, VEIER);	/* enable interrupt in VEU */
+	/* enable interrupt in VEU */
+	write_reg(ump, 1, VEIER);
 
 	/* Enable interrupt in UIO driver */
 	{
@@ -678,7 +424,22 @@ shveu_operation(
 		}
 	}
 
-	write_reg(ump, 1, VESTR);	/* start operation */
+	/* start operation */
+	write_reg(ump, 1, VESTR);
+
+#ifdef DEBUG
+	fprintf(stderr, "%s OUT\n", __FUNCTION__);
+#endif
+
+	return 0;
+}
+
+void
+shveu_wait(
+	unsigned int veu_index)
+{
+	/* Ignore veu_index as we only support one VEU at the moment */
+	struct uio_map *ump = &sh_veu_uio_mmio;
 
 	/* Wait for an interrupt */
 	{
@@ -687,12 +448,37 @@ shveu_operation(
 	}
 
 	write_reg(ump, 0x100, VEVTR);	/* ack int, write 0 to bit 0 */
+}
 
-#ifdef DEBUG
-	fprintf(stderr, "%s OUT\n", __FUNCTION__);
-#endif
+int
+shveu_operation(
+	unsigned int veu_index,
+	unsigned char *src_py,
+	unsigned char *src_pc,
+	unsigned long src_width,
+	unsigned long src_height,
+	unsigned long src_pitch,
+	E_VEU_FORMAT src_fmt,
+	unsigned char *dst_py,
+	unsigned char *dst_pc,
+	unsigned long dst_width,
+	unsigned long dst_height,
+	unsigned long dst_pitch,
+	E_VEU_FORMAT dst_fmt,
+	E_VEU_ROTATION rotate)
+{
+	int ret = 0;
 
-	return 0;
+	ret = shveu_start(
+		veu_index,
+		src_py, src_pc, src_width, src_height, src_pitch, src_fmt,
+		dst_py, dst_pc, dst_width, dst_height, dst_pitch, dst_fmt,
+		rotate);
+
+	if (ret == 0)
+		shveu_wait(veu_index);
+
+	return ret;
 }
 
 
@@ -729,128 +515,3 @@ shveu_nv12_to_rgb565(
 		0);
 }
 
-#if 0
-static int sh_veu_get_caps(vidix_capability_t * to)
-{
-	memcpy(to, &sh_veu_cap, sizeof(vidix_capability_t));
-	return 0;
-}
-
-static int is_supported_fourcc(uint32_t fourcc)
-{
-	switch (fourcc) {
-	case IMGFMT_YV12:
-		return 1;
-	default:
-		return 0;
-	}
-}
-
-static int sh_veu_query_fourcc(vidix_fourcc_t * to)
-{
-	if (is_supported_fourcc(to->fourcc)) {
-		to->depth = VID_DEPTH_ALL;
-		to->flags = VID_CAP_EXPAND | VID_CAP_SHRINK;
-		return 0;
-	}
-	to->depth = to->flags = 0;
-	return ENOSYS;
-}
-
-
-static int sh_veu_config_playback(vidix_playback_t * info)
-{
-	int src_w, dst_w;
-	int src_h, dst_h;
-	int hscale, vscale;
-	long base0;
-	int y_pitch = 0, uv_pitch = 0;
-	unsigned int i;
-	unsigned long addr;
-	unsigned long size;
-
-	if (!is_supported_fourcc(info->fourcc))
-		return -1;
-
-	src_w = info->src.w;
-	src_h = info->src.h;
-
-	switch (info->fourcc) {
-	case IMGFMT_YV12:
-		y_pitch = (src_w + 15) & ~15;
-		uv_pitch = ((src_w / 2) + 15) & ~15;
-
-		YOffs = info->offset.y = 0;
-		UOffs = info->offset.u = y_pitch * src_h;
-
-		VOffs = info->offset.v =
-		    info->offset.u + (uv_pitch * src_h / 2);
-		UVOffs = info->offset.v + (uv_pitch * src_h / 2);
-		info->frame_size = y_pitch * src_h * 3;
-		break;
-	default:
-		exit(1);
-	}
-
-	size = sh_veu_uio_mem.size - SH_VEU_RESERVE_TOP;
-	info->num_frames = size / info->frame_size;
-	if (info->num_frames > VID_PLAY_MAXFRAMES)
-		info->num_frames = VID_PLAY_MAXFRAMES;
-
-	printf("using %d frames, size = %d, frame size = %d\n",
-	       (int) info->num_frames, (int) size, (int) info->frame_size);
-
-	info->dga_addr = sh_veu_uio_mem.iomem;
-
-	info->dest.pitch.y = 16;
-	info->dest.pitch.u = 16;
-	info->dest.pitch.v = 16;
-
-	for (i = 0; i < info->num_frames; i++)
-		info->offsets[i] = info->frame_size * i;
-
-#if defined(CACHED_UV)
-	{
-		cached_data = malloc(sh_veu_uio_mem.size);
-		info->offset.u += (cached_data - (void *) info->dga_addr);
-		info->offset.v += (cached_data - (void *) info->dga_addr);
-	}
-#endif
-	my_info = *info;
-
-	sh_veu_setup_planes(info, &_src, &_dst, &_tmp);
-#ifdef USE_THREADS
-	pthread_create(&sh_veu_thread, NULL, sh_veu_thread_fn, NULL);
-#endif
-	return 0;
-}
-
-
-static int sh_veu_playback_on(void)
-{
-	return 0;
-}
-
-
-static int sh_veu_playback_off(void)
-{
-	return 0;
-}
-
-int sh_veu_framedrop;
-
-static int sh_veu_frame_sel(unsigned int frame)
-{
-#ifdef USE_THREADS
-	if (pthread_mutex_trylock(&sh_veu_busy) == 0) {
-		sh_veu_frame = frame;
-		sem_post(&sh_veu_blocker);
-		pthread_mutex_unlock(&sh_veu_busy);
-	} else
-		printf("sh_veu_framefrop = %d  -\n", ++sh_veu_framedrop);
-#else
-	sh_veu_draw(&my_info, frame, &_src, &_dst, &_tmp);
-#endif
-	return 0;
-}
-#endif

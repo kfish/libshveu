@@ -25,25 +25,60 @@
 #define __VEU_COLORSPACE_H__
 
 /** Rotation */
-enum {
-        /** No rotation */
-	SHVEU_NO_ROT=0,
-
-        /** Rotate 90 degrees clockwise */
-	SHVEU_ROT_90,
-};
+typedef enum {
+	SHVEU_NO_ROT=0,	/**< No rotation */
+	SHVEU_ROT_90,	/**< Rotate 90 degrees clockwise */
+} E_VEU_ROTATION;
 
 /** Image formats */
-enum {
-        /** RGB565 */
-	SHVEU_RGB565=0,
+typedef enum {
+	
+	SHVEU_RGB565=0,	/**< RGB565 */
+	SHVEU_YCbCr420,	/**< YCbCr 4:2:0 */
+	SHVEU_YCbCr422,	/**< YCbCr 4:2:2 */
+} E_VEU_FORMAT;
 
-        /** YCbCr 4:2:0 */
-	SHVEU_YCbCr420,
+/** Start a (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
+ * \param veu_index Index of which VEU to use
+ * \param src_py Pointer to Y or RGB plane of source image
+ * \param src_pc Pointer to CbCr plane of source image (ignored for RGB)
+ * \param src_width Width in pixels of source image
+ * \param src_height Height in pixels of source image
+ * \param src_pitch Line pitch of source image
+ * \param src_format Format of source image
+ * \param dst_py Pointer to Y or RGB plane of destination image
+ * \param dst_pc Pointer to CbCr plane of destination image (ignored for RGB)
+ * \param dst_width Width in pixels of destination image
+ * \param dst_height Height in pixels of destination image
+ * \param dst_pitch Line pitch of destination image
+ * \param dst_fmt Format of destination image
+ * \param rotate Rotation to apply
+ * \retval 0 Success
+ * \retval -1 Error: Attempt to perform simultaneous scaling and rotation
+ */
+int
+shveu_start(
+	unsigned int veu_index,
+	unsigned char *src_py,
+	unsigned char *src_pc,
+	unsigned long src_width,
+	unsigned long src_height,
+	unsigned long src_pitch,
+	E_VEU_FORMAT src_fmt,
+	unsigned char *dst_py,
+	unsigned char *dst_pc,
+	unsigned long dst_width,
+	unsigned long dst_height,
+	unsigned long dst_pitch,
+	E_VEU_FORMAT dst_fmt,
+	E_VEU_ROTATION rotate);
 
-        /** YCbCr 4:2:2 */
-	SHVEU_YCbCr422,
-};
+/** Wait for a VEU operation to complete. The operation is started by a call to shveu_start.
+ * \param veu_index Index of which VEU to use
+ */
+void
+shveu_wait(
+	unsigned int veu_index);
 
 /** Perform (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
  * \param veu_index Index of which VEU to use
@@ -71,14 +106,14 @@ shveu_operation(
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	int src_fmt,
+	E_VEU_FORMAT src_fmt,
 	unsigned char *dst_py,
 	unsigned char *dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	int dst_fmt,
-	int rotate);
+	E_VEU_FORMAT dst_fmt,
+	E_VEU_ROTATION rotate);
 
 /** Perform scale from RG565 to YCbCr 4:2:0 surface
  * \param rgb565_in Pointer to input RGB565 image

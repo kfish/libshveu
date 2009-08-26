@@ -17,7 +17,7 @@ extern "C" {
  * 
  * \subsection contents Contents
  * 
- * - \link shveu.h shveu.h \endlink:
+ * - \link shveu.h shveu.h \endlink, \link veu_colorspace.h veu_colorspace.h \endlink:
  * Documentation of the SHVEU C API
  *
  * - \link configuration Configuration \endlink:
