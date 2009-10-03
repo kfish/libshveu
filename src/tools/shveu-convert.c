@@ -219,6 +219,8 @@ static int guess_colorspace (char * filename, int * c)
         char * ext;
 	off_t size;
 
+	if (filename == NULL) return -1;
+
 	/* If the colorspace is already set (eg. explicitly by user args)
 	 * then don't try to guess */
 	if (*c != -1) return -1;
@@ -292,6 +294,7 @@ int main (int argc, char * argv[])
 {
         char * infilename = NULL, * outfilename = NULL;
         FILE * infile, * outfile;
+	size_t nread;
 	size_t input_size, output_size;
 	unsigned char * src_py, * src_pc, * dest_py, * dest_pc;
 	int veu_index=0;
@@ -477,7 +480,6 @@ int main (int argc, char * argv[])
 		dest_pc = dest_py + (output_w * output_h);
 	}
 
-	/* Read input */
         if (strcmp (infilename, "-") == 0) {
 	        infile = stdin;
 	} else {
@@ -488,26 +490,7 @@ int main (int argc, char * argv[])
                         goto exit_err;
 		}
 	}
-	if (fread (src_py, 1, input_size, infile) != input_size) {
-			fprintf (stderr, "%s: error reading input file %s\n",
-				 progname, infilename);
-	}
-	if (infile != stdin) fclose (infile);
 
-        shveu_open ();
-
-	ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
-			                  dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
-				          rotation);
-
-        shveu_close ();
-
-	if (ret == -1) {
-		fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
-		goto exit_err;
-	}
-
-	/* Write output */
         if (outfilename == NULL || strcmp (outfilename, "-") == 0) {
                 outfile = stdout;
         } else {
@@ -519,11 +502,45 @@ int main (int argc, char * argv[])
                 }
         }
 
-	if (fwrite (dest_py, 1, output_size, outfile) != output_size) {
-			fprintf (stderr, "%s: error writing input file %s\n",
-				 progname, outfilename);
+
+        shveu_open ();
+
+	while (1) {
+		/* Read input */
+		if ((nread = fread (src_py, 1, input_size, infile)) != input_size) {
+			if (nread == 0) {
+				break;
+			} else {
+				fprintf (stderr, "%s: error reading input file %s\n",
+					 progname, infilename);
+			}
+		}
+
+		ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
+				                  dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
+					          rotation);
+
+		if (ret == -1) {
+			fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
+			goto exit_err;
+		}
+
+		/* Write output */
+		if (fwrite (dest_py, 1, output_size, outfile) != output_size) {
+				fprintf (stderr, "%s: error writing input file %s\n",
+					 progname, outfilename);
+		}
 	}
-	if (outfile != stdout) fclose (outfile);
+
+        shveu_close ();
+
+	if (infile != stdin) fclose (infile);
+
+	if (outfile == stdout) {
+		fflush (stdout);
+	} else {
+		fclose (outfile);
+	}
 
 exit_ok:
         exit (0);
