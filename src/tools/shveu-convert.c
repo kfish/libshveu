@@ -12,20 +12,6 @@
 
 #include "shveu/shveu.h"
 
-#if 0
-If no output filename is specified, data is output to stdout.
-Specify "-" to force output to be written to stdout.
-
-If no input filename is specified, data is read from stdin.
-Specify "-" to force input to be read from stdin.
-
-Filenames with extension ".yuv" will be assumed to be in
-format YCbCr 4:2:0.
-
-Filenames with extension ".rgb" will be assumed to be in
-format RGB565.
-#endif
-
 static int input_w = -1;
 static int input_h = -1;
 static int output_w = -1;
@@ -41,25 +27,33 @@ usage (const char * progname)
 {
         printf ("Usage: %s [options] [input-filename [output-filename]]\n", progname);
         printf ("Convert raw image data using the SH-Mobile VEU.\n");
-        printf ("\nWhen run without any options, %s will perform no conversion.\n", progname);
-        printf ("To override this behavior, specify any of the following options:\n");
-        printf ("Input options\n");
-        printf ("  (You must specify either the input colorspace ...\n");
-        printf ("  -c, --input-colorspace [RGB565, NV12, YCbCr4:2:0, YCbCr4:2:2]\n");
+	printf ("\n");
+        printf ("If no output filename is specified, data is output to stdout.\n");
+        printf ("Specify '-' to force output to be written to stdout.\n");
+	printf ("\n");
+        printf ("If no input filename is specified, data is read from stdin.\n");
+        printf ("Specify '-' to force input to be read from stdin.\n");
+        printf ("\nInput options\n");
+        printf ("  -c, --input-colorspace (RGB565, NV12, YCbCr420, YCbCr422)\n");
         printf ("                         Specify input colorspace\n");
-        printf ("  -s, --input-size       Set the input image size [qcif, cif, qvga, vga]\n");
+        printf ("  -s, --input-size       Set the input image size (qcif, cif, qvga, vga)\n");
         printf ("\nOutput options\n");
         printf ("  -o filename, --output filename\n");
         printf ("                         Specify output filename (default: stdout)\n");
-        printf ("  -C, --output-colorspace [RGB565, NV12, YCbCr4:2:0, YCbCr4:2:2]\n");
-        printf ("                         Specify output colorspace [default is same as input colorspace]\n");
-        printf ("  -S, --output-size      Set the input image size [qcif, cif, qvga, vga]\n");
-        printf ("\nTransforms options\n");
+        printf ("  -C, --output-colorspace (RGB565, NV12, YCbCr420, YCbCr422)\n");
+        printf ("                         Specify output colorspace\n");
+        printf ("\nTransform options\n");
+	printf ("  Note that the VEU does not support combined rotation and scaling.\n");
+        printf ("  -S, --output-size      Set the output image size (qcif, cif, qvga, vga)\n");
+	printf ("                         [default is same as input size, ie. no rescaling]\n");
         printf ("  -r, --rotate           Rotate the image 90 degrees clockwise\n");
         printf ("\nMiscellaneous options\n");
         printf ("  -h, --help             Display this help and exit\n");
         printf ("  -v, --version          Output version information and exit\n");
-        printf ("\n");
+        printf ("\nFile extensions are interpreted as follows unless otherwise specified:\n");
+	printf ("  .yuv    YCbCr420\n");
+	printf ("  .rgb    RGB565\n");
+	printf ("\n");
         printf ("Please report bugs to <linux-sh@vger.kernel.org>\n");
 }
 
@@ -137,7 +131,8 @@ int set_colorspace (char * arg, int * c)
                     !strncasecmp (arg, "rgb", 3)) {
                         *c = SHVEU_RGB565;
                 } else if (!strncasecmp (arg, "YCbCr420", 8) ||
-                           !strncasecmp (arg, "420", 3)) {
+                           !strncasecmp (arg, "420", 3) ||
+                           !strncasecmp (arg, "NV12", 4)) {
                         *c = SHVEU_YCbCr420;
                 } else if (!strncasecmp (arg, "YCbCr422", 8) ||
                            !strncasecmp (arg, "422", 3)) {
@@ -158,9 +153,9 @@ static char * show_colorspace (int c)
 	case SHVEU_RGB565:
 		return "RGB565";
 	case SHVEU_YCbCr420:
-		return "YCbCr 4:2:0";
+		return "YCbCr420";
 	case SHVEU_YCbCr422:
-		return "YCbCr 4:2:2";
+		return "YCbCr422";
 	}
 
 	return "<Unknown colorspace>";
@@ -219,7 +214,8 @@ static int guess_colorspace (char * filename, int * c)
         char * ext;
 	off_t size;
 
-	if (filename == NULL) return -1;
+        if (filename == NULL || !strcmp (filename, "-"))
+                return -1;
 
 	/* If the colorspace is already set (eg. explicitly by user args)
 	 * then don't try to guess */
