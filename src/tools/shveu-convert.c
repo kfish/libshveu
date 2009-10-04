@@ -60,25 +60,25 @@ usage (const char * progname)
 void
 print_short_options (char * optstring)
 {
-  char *c;
+        char *c;
 
-  for (c=optstring; *c; c++) {
-    if (*c != ':') printf ("-%c ", *c);
-  }
+        for (c=optstring; *c; c++) {
+                if (*c != ':') printf ("-%c ", *c);
+        }
 
-  printf ("\n");
+        printf ("\n");
 }
 
 #ifdef HAVE_GETOPT_LONG
 void
 print_options (struct option long_options[], char * optstring)
 {
-  int i;
-  for (i=0; long_options[i].name != NULL; i++)  {
-    printf ("--%s ", long_options[i].name);
-  }
+        int i;
+        for (i=0; long_options[i].name != NULL; i++)  {
+                printf ("--%s ", long_options[i].name);
+        }
 
-  print_short_options (optstring);
+        print_short_options (optstring);
 }
 #endif
 
