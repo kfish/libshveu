@@ -9,4 +9,4 @@ SHVEU_LIBS = $(SHVEUDIR)/libshveu.la
 bin_PROGRAMS = shveu-convert
 
 shveu_convert_SOURCES = shveu-convert.c
-shveu_convert_LDADD = $(SHVEU_LIBS)
+shveu_convert_LDADD = $(SHVEU_LIBS) $(UIOMUX_LIBS)

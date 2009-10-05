@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <uiomux/uiomux.h>
+
 #include "shveu/shveu.h"
 
 static int input_w = -1;
@@ -288,13 +290,17 @@ static int guess_size (char * filename, int colorspace, int * w, int * h)
 
 int main (int argc, char * argv[])
 {
+	UIOMux * uiomux;
+
         char * infilename = NULL, * outfilename = NULL;
-        FILE * infile, * outfile;
+        FILE * infile, * outfile = NULL;
 	size_t nread;
 	size_t input_size, output_size;
-	unsigned char * src_py, * src_pc, * dest_py, * dest_pc;
+	unsigned char * src_virt, * dest_virt;
+	unsigned long src_py, * src_pc, * dest_py, * dest_pc;
 	int veu_index=0;
 	int ret;
+	int frameno=0;
 
         int show_version = 0;
         int show_help = 0;
@@ -461,15 +467,20 @@ int main (int argc, char * argv[])
 	input_size = imgsize (input_colorspace, input_w, input_h);
 	output_size = imgsize (output_colorspace, output_w, output_h);
 
+	uiomux = uiomux_open ();
+
 	/* Set up memory buffers */
-	src_py = malloc (input_size);
+	src_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, input_size, 32);
+	src_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, src_virt);
+	fprintf (stderr, "Allocated %d bytes for input buffer at %x\n", input_size, src_py);
 	if (input_colorspace == SHVEU_RGB565) {
 	        src_pc = NULL;
 	} else {
 		src_pc = src_py + (input_w * input_h);
 	}
 
-	dest_py = malloc (output_size);
+	dest_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, output_size, 32);
+	dest_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, dest_virt);
 	if (output_colorspace == SHVEU_RGB565) {
 	        dest_pc = NULL;
 	} else {
@@ -487,24 +498,29 @@ int main (int argc, char * argv[])
 		}
 	}
 
-        if (outfilename == NULL || strcmp (outfilename, "-") == 0) {
-                outfile = stdout;
-        } else {
-                outfile = fopen (outfilename, "wb");
-                if (outfile == NULL) {
-                        fprintf (stderr, "%s: unable to open output file %s\n",
-	                         progname, outfilename);
-                        goto exit_err;
+	if (outfilename != NULL) {
+                if (strcmp (outfilename, "-") == 0) {
+                        outfile = stdout;
+                } else {
+                        outfile = fopen (outfilename, "wb");
+                        if (outfile == NULL) {
+                                fprintf (stderr, "%s: unable to open output file %s\n",
+	                                 progname, outfilename);
+                                goto exit_err;
+                        }
                 }
-        }
-
+	}
 
         shveu_open ();
 
 	while (1) {
+#ifdef DEBUG
+		fprintf (stderr, "%s: Converting frame %d\n", progname, frameno);
+#endif
+
 		/* Read input */
-		if ((nread = fread (src_py, 1, input_size, infile)) != input_size) {
-			if (nread == 0) {
+		if ((nread = fread (src_virt, 1, input_size, infile)) != input_size) {
+			if (nread == 0 && feof (infile)) {
 				break;
 			} else {
 				fprintf (stderr, "%s: error reading input file %s\n",
@@ -512,9 +528,11 @@ int main (int argc, char * argv[])
 			}
 		}
 
+		uiomux_lock (uiomux, UIOMUX_SH_VEU);
 		ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
 				                  dest_py, dest_pc, output_w, output_h, input_h, output_colorspace,
 					          rotation);
+		uiomux_unlock (uiomux, UIOMUX_SH_VEU);
 
 		if (ret == -1) {
 			fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
@@ -522,21 +540,29 @@ int main (int argc, char * argv[])
 		}
 
 		/* Write output */
-		if (fwrite (dest_py, 1, output_size, outfile) != output_size) {
+		if (outfile && fwrite (dest_virt, 1, output_size, outfile) != output_size) {
 				fprintf (stderr, "%s: error writing input file %s\n",
 					 progname, outfilename);
 		}
+
+		frameno++;
 	}
 
         shveu_close ();
+
+	uiomux_free (uiomux, UIOMUX_SH_VEU, src_virt, input_size);
+	uiomux_free (uiomux, UIOMUX_SH_VEU, dest_virt, output_size);
+	uiomux_close (uiomux);
 
 	if (infile != stdin) fclose (infile);
 
 	if (outfile == stdout) {
 		fflush (stdout);
-	} else {
+	} else if (outfile) {
 		fclose (outfile);
 	}
+
+	printf ("Frames:\t\t%d\n", frameno);
 
 exit_ok:
         exit (0);
