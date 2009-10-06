@@ -1,0 +1,86 @@
+.de Sh \" Subsection heading
+.br
+.if t .Sp
+.ne 5
+.PP
+\fB\\$1\fR
+.PP
+..
+
+.TH "shveu-convert" 1 "Oct 2009" "SH VEU" "Linux-SH Multimedia"
+
+.SH NAME
+shveu-convert \- Convert raw image data using the SH-Mobile VEU
+
+.SH SYNOPSIS
+.PP
+\fBshveu-convert\fR
+[\-c \fBcolorspace\fR | \-\-input\-colorspace \fBcolorspace\fR ]
+[\-C \fBcolorspace\fR | \-\-output-colorspace \fBcolorspace\fR ]
+[\-s \fBsize\fR | \-\-input-size \fBsize\fR ]
+[\-S \fBsize\fR | \-\-output-size \fBsize\fR ]
+[\-o \fBfilename\fR  | \-\-output \fBfilename\fR ]
+filename
+
+\fBshveu-convert\fR [\-c \fBcolorspace\fR | \-\-input\-colorspace \fBcolorspace\fR ]
+[\-C \fBcolorspace\fR | \-\-output-colorspace \fBcolorspace\fR ]
+[\-r  | \-\-rotate]
+[\-o \fBfilename\fR  | \-\-output \fBfilename\fR ]
+filename
+
+\fBshveu-convert\fR [\-h  | \-\-help ]  [\-v  | \-\-version ]  
+
+.SH DESCRIPTION
+.PP
+\fBshveu-convert\fR transforms an input file using the SH-Mobile VEU.
+If no output filename is specified, data is output to stdout.
+Specify '-' to force output to be written to stdout.
+If no input filename is specified, data is read from stdin.
+Specify '-' to force input to be read from stdin.
+.PP
+Note that the VEU does not support combined rotation and scaling.
+
+.SH "Options"
+.PP
+\fBshveu-convert\fR accepts the following options:
+
+.SS "Input options"
+.IP "\-c \fBcolorspace\fR, \-\-input\-colorspace \fBcolorspace\fR" 10
+Specify input \fBcolorspace\fR (RGB565, NV12, YCbCr420, YCbCr422).
+
+.IP "\-s \fBsize\fR, \-\-input\-size \fBsize\fR" 10
+Set the input image size (qcif, cif, qvga, vga).
+
+.SS "Output options"
+.IP "\-o \fBfilename\fR, \-\-output \fBfilename\fR" 10
+Specify output filename (default: stdout).
+
+.IP "\-C \fBcolorspace\fR, \-\-output\-colorspace \fBcolorspace\fR
+Specify output \fBcolorspace\fR (RGB565, NV12, YCbCr420, YCbCr422).
+
+.SS "Transform options"
+.IP "\-S \fBsize\fR, \-\-output\-size \fBsize\fR" 10
+Set the output image size (qcif, cif, qvga, vga).
+The default output size is the same as the input size, ie. no rescaling.
+
+.IP "\-r, \-\-rotate" 10
+Rotate the image 90 degrees clockwise.
+
+.SS "Miscellaneous options"
+.IP "\-h, \-\-help" 10 
+Display usage information and exit. 
+.IP "\-v, \-\-version" 10 
+Output version information and exit. 
+
+.SH "File extensions"
+File extensions are interpreted as follows unless otherwise specified:
+.IP ".yuv" 10
+YCbCr420
+.IP ".rgb" 10
+RGB565
+
+.SH AUTHORS
+
+shveu-convert was written by Conrad Parker
+
+Please report bugs to <linux-sh@vger.kernel.org>
