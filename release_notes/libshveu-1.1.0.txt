@@ -1,14 +1,13 @@
 libshveu
 ===========
 
-libshveu: A library for controlling the SH-Mobile VEU.
+libshveu: A library for controlling SH-Mobile VEU
 
-Copyright (C) 2009 Renesas Technology Corp.
+The source archive, and more information about the library are available from:
 
-The [SH-Mobile][0] processor series includes a hardware video engine
-unit (VEU) that supports colorspace conversion, rotation and scaling.
+        http://linux-sh.org/cgi-bin/moin.cgi/libshveu
 
-This source archive contains:
+This is the first public release of libshveu. It contains:
 
  * src/libshveu: the libshveu shared library
  * src/tools: commandline tools
