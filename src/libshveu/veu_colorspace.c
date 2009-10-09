@@ -51,10 +51,12 @@
 static int fgets_with_openclose(char *fname, char *buf, size_t maxlen)
 {
 	FILE *fp;
+	char * s;
 
 	if ((fp = fopen(fname, "r")) != NULL) {
-		fgets(buf, maxlen, fp);
+		s = fgets(buf, maxlen, fp);
 		fclose(fp);
+		if (s == NULL) return -1;
 		return strlen(buf);
 	} else {
 		return -1;
@@ -441,13 +443,15 @@ void
 shveu_wait(
 	unsigned int veu_index)
 {
+	ssize_t nread;
+
 	/* Ignore veu_index as we only support one VEU at the moment */
 	struct uio_map *ump = &sh_veu_uio_mmio;
 
 	/* Wait for an interrupt */
 	{
 		unsigned long n_pending;
-		read(sh_veu_uio_dev.fd, &n_pending, sizeof(u_long));
+		nread = read(sh_veu_uio_dev.fd, &n_pending, sizeof(u_long));
 	}
 
 	write_reg(ump, 0x100, VEVTR);	/* ack int, write 0 to bit 0 */
@@ -496,7 +500,7 @@ shveu_rgb565_to_nv12 (
 {
 	return shveu_operation(
 		0,
-		rgb565_in, NULL,  width, height, width, SHVEU_RGB565,
+		rgb565_in, 0,  width, height, width, SHVEU_RGB565,
 		y_out,     c_out, width, height, width, SHVEU_YCbCr420,
 		0);
 }
@@ -514,7 +518,7 @@ shveu_nv12_to_rgb565(
 	return shveu_operation(
 		0,
 		y_in,       c_in, width, height, pitch_in,  SHVEU_YCbCr420,
-		rgb565_out, NULL, width, height, pitch_out, SHVEU_RGB565,
+		rgb565_out, 0, width, height, pitch_out, SHVEU_RGB565,
 		0);
 }
 
