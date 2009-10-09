@@ -264,19 +264,19 @@ void shveu_close(void)
 int
 shveu_start(
 	unsigned int veu_index,
-	unsigned char *src_py,
-	unsigned char *src_pc,
+	unsigned long src_py,
+	unsigned long src_pc,
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	E_VEU_FORMAT src_fmt,
-	unsigned char *dst_py,
-	unsigned char *dst_pc,
+	shveu_format_t src_fmt,
+	unsigned long dst_py,
+	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	E_VEU_FORMAT dst_fmt,
-	E_VEU_ROTATION rotate)
+	shveu_format_t dst_fmt,
+	shveu_rotation_t rotate)
 {
 	/* Ignore veu_index as we only support one VEU at the moment */
 	struct uio_map *ump = &sh_veu_uio_mmio;
@@ -295,6 +295,9 @@ shveu_start(
 		return -1;
 	if (rotate && (dst_width != src_height))
 		return -1;
+
+	/* reset */
+	sh_veu_init();
 
 	/* source */
 	write_reg(ump, (unsigned long)src_py, VSAYR);
@@ -453,19 +456,19 @@ shveu_wait(
 int
 shveu_operation(
 	unsigned int veu_index,
-	unsigned char *src_py,
-	unsigned char *src_pc,
+	unsigned long src_py,
+	unsigned long src_pc,
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	E_VEU_FORMAT src_fmt,
-	unsigned char *dst_py,
-	unsigned char *dst_pc,
+	shveu_format_t src_fmt,
+	unsigned long dst_py,
+	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	E_VEU_FORMAT dst_fmt,
-	E_VEU_ROTATION rotate)
+	shveu_format_t dst_fmt,
+	shveu_rotation_t rotate)
 {
 	int ret = 0;
 
@@ -485,9 +488,9 @@ shveu_operation(
 
 int
 shveu_rgb565_to_nv12 (
-	unsigned char *rgb565_in,
-	unsigned char *y_out,
-	unsigned char *c_out,
+	unsigned long rgb565_in,
+	unsigned long y_out,
+	unsigned long c_out,
 	unsigned long width,
 	unsigned long height)
 {
@@ -500,9 +503,9 @@ shveu_rgb565_to_nv12 (
 
 int
 shveu_nv12_to_rgb565(
-	unsigned char *y_in,
-	unsigned char *c_in,
-	unsigned char *rgb565_out,
+	unsigned long y_in,
+	unsigned long c_in,
+	unsigned long rgb565_out,
 	unsigned long width,
 	unsigned long height,
 	unsigned long pitch_in,

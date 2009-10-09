@@ -297,7 +297,7 @@ int main (int argc, char * argv[])
 	size_t nread;
 	size_t input_size, output_size;
 	unsigned char * src_virt, * dest_virt;
-	unsigned long src_py, * src_pc, * dest_py, * dest_pc;
+	unsigned long src_py, src_pc, dest_py, dest_pc;
 	int veu_index=0;
 	int ret;
 	int frameno=0;
@@ -472,9 +472,8 @@ int main (int argc, char * argv[])
 	/* Set up memory buffers */
 	src_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, input_size, 32);
 	src_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, src_virt);
-	fprintf (stderr, "Allocated %d bytes for input buffer at %x\n", input_size, src_py);
 	if (input_colorspace == SHVEU_RGB565) {
-	        src_pc = NULL;
+	        src_pc = 0;
 	} else {
 		src_pc = src_py + (input_w * input_h);
 	}
@@ -482,7 +481,7 @@ int main (int argc, char * argv[])
 	dest_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, output_size, 32);
 	dest_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, dest_virt);
 	if (output_colorspace == SHVEU_RGB565) {
-	        dest_pc = NULL;
+	        dest_pc = 0;
 	} else {
 		dest_pc = dest_py + (output_w * output_h);
 	}
