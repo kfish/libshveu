@@ -138,6 +138,10 @@ static int setup_uio_map(struct sh_veu_uio_device *udp, int nr,
 	return 0;
 }
 
+/* global variables */
+struct sh_veu_uio_device sh_veu_uio_dev;
+struct uio_map sh_veu_uio_mmio, sh_veu_uio_mem;
+
 /* Helper functions for reading registers. */
 
 static unsigned long read_reg(struct uio_map *ump, int reg_nr)
@@ -152,6 +156,16 @@ static void write_reg(struct uio_map *ump, unsigned long value, int reg_nr)
 	volatile unsigned long *reg = ump->iomem + reg_nr;
 
 	*reg = value;
+}
+
+static int sh_veu_is_veu2h(void)
+{
+	return sh_veu_uio_mmio.size == 0x27c;
+}
+
+static int sh_veu_is_veu3f(void)
+{
+	return sh_veu_uio_mmio.size == 0xcc;
 }
 
 static void set_scale(struct uio_map *ump, int vertical,
@@ -208,10 +222,6 @@ static void set_scale(struct uio_map *ump, int vertical,
 
 	write_reg(ump, value, VRFSR);
 }
-
-/* global variables */
-struct sh_veu_uio_device sh_veu_uio_dev;
-struct uio_map sh_veu_uio_mmio, sh_veu_uio_mem;
 
 static int sh_veu_probe(int verbose, int force)
 {

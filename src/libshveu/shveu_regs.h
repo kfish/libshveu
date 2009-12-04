@@ -54,6 +54,8 @@
 #define VSTAR 0xb0		/* status */
 #define VBSRR 0xb4		/* reset */
 
+#define VRPBR 0xc8		/* resize passband */
+
 #define VMCR00 0x200		/* color conversion matrix coefficient 00 */
 #define VMCR01 0x204		/* color conversion matrix coefficient 01 */
 #define VMCR02 0x208		/* color conversion matrix coefficient 02 */
