@@ -141,7 +141,7 @@ if test "x${ac_enable_uiomux}" = xyes ; then
   if test "x$HAVE_UIOMUX" = "xyes" ; then
     AC_DEFINE(HAVE_UIOMUX, [1], [Define to 1 if you have libuiomux])
     UIOMUX_SUPPORT="yes"
-    shcodecs_pkgdeps="$shcodecs_pkgdeps uiomux"
+    shveu_pkgdeps="$shveu_pkgdeps uiomux"
   fi
 else
   UIOMUX_SUPPORT="disabled"
