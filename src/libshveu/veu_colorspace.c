@@ -171,7 +171,7 @@ static int sh_veu_is_veu3f(void)
 static void set_scale(struct uio_map *ump, int vertical,
 		      int size_in, int size_out)
 {
-	unsigned long fixpoint, mant, frac, value;
+	unsigned long fixpoint, mant, frac, value, vb;
 
 	/* calculate FRAC and MANT */
 
@@ -221,6 +221,34 @@ static void set_scale(struct uio_map *ump, int vertical,
 	}
 
 	write_reg(ump, value, VRFSR);
+
+	/* VEU3F needs additional VRPBR register handling */
+	if (sh_veu_is_veu3f()) {
+	    if (size_out > size_in)
+	        vb = 64;
+	    else {
+	        if ((mant >= 8) && (mant < 16))
+	            value = 4;
+	        else if ((mant >= 4) && (mant < 8))
+	            value = 2;
+	        else
+	            value = 1;
+
+	        vb = 64 * 4096 * value;
+	        vb /= 4096 * mant + frac;
+	    }
+
+	    /* set resize passband register */
+	    value = read_reg(ump, VRPBR);
+	    if (vertical) {
+	        value &= ~0xffff0000;
+	        value |= vb << 16;
+	    } else {
+	        value &= ~0xffff;
+	        value |= vb;
+	    }
+	    write_reg(ump, value, VRPBR);
+	}
 }
 
 static int sh_veu_probe(int verbose, int force)
