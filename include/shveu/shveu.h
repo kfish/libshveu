@@ -85,15 +85,21 @@ extern "C" {
  */
 
 /**
+ * Probe VEU devices.
+ * \retval the number of found VEUs
+ */
+int shveu_probe(int force);
+
+/**
  * Open a VEU device.
  * \retval 0 Success
  */
-int shveu_open(void);
+int shveu_open(unsigned int veu_index);
 
 /**
  * Close a VEU device.
  */
-void shveu_close(void);
+void shveu_close(unsigned int veu_index);
 
 #include <shveu/veu_colorspace.h>
 

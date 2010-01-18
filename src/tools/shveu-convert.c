@@ -400,7 +400,7 @@ int main (int argc, char * argv[])
         }
 
         infilename = argv[optind++];
-	
+
 	if (optind < argc) {
 	        outfilename = argv[optind++];
 	}
@@ -510,7 +510,14 @@ int main (int argc, char * argv[])
                 }
 	}
 
-        shveu_open ();
+        veu_index = shveu_probe (0);
+	if (veu_index <= 0) {
+		fprintf (stderr, "ERROR: No VEU found\n");
+		goto exit_err;
+	}
+	veu_index--; 	/* use the last found VEU */
+
+        shveu_open (veu_index);
 
 	while (1) {
 #ifdef DEBUG
@@ -547,7 +554,7 @@ int main (int argc, char * argv[])
 		frameno++;
 	}
 
-        shveu_close ();
+        shveu_close (veu_index);
 
 	uiomux_free (uiomux, UIOMUX_SH_VEU, src_virt, input_size);
 	uiomux_free (uiomux, UIOMUX_SH_VEU, dest_virt, output_size);

@@ -63,52 +63,66 @@ static int fgets_with_openclose(char *fname, char *buf, size_t maxlen)
 	}
 }
 
-struct sh_veu_uio_device {
-	char *name;
-	char *path;
-	int fd;
-};
-
 struct uio_map {
 	unsigned long address;
 	unsigned long size;
 	void *iomem;
 };
 
+struct sh_veu_uio_device {
+	char *name;
+	char *path;
+	int fd;
+	struct uio_map *mmio;
+	struct uio_map *mem;
+	struct sh_veu_uio_device *prev;
+	struct sh_veu_uio_device *next;
+};
+
 
 #define MAXUIOIDS  100
 #define MAXNAMELEN 256
 
-static int locate_sh_veu_uio_device(char *name,
-				    struct sh_veu_uio_device *udp)
+static int locate_sh_veu_uio_devices(char *name_prefix,
+				     struct sh_veu_uio_device **udpp)
 {
+	struct sh_veu_uio_device *prev_udp;
 	char fname[MAXNAMELEN], buf[MAXNAMELEN];
-	int uio_id, i;
+	int uio_id, i, n;
 
+	n = 0;
+	prev_udp = NULL;
 	for (uio_id = 0; uio_id < MAXUIOIDS; uio_id++) {
 		sprintf(fname, "/sys/class/uio/uio%d/name", uio_id);
 		if (fgets_with_openclose(fname, buf, MAXNAMELEN) < 0)
 			continue;
-		if (strncmp(name, buf, strlen(name)) == 0)
-			break;
+		if (strncmp(name_prefix, buf, strlen(name_prefix)) == 0) {
+			*udpp = malloc(sizeof(struct sh_veu_uio_device));
+			if (!*udpp)
+				break;
+			memset(*udpp, 0, sizeof(**udpp));
+			(*udpp)->name = strdup(buf);
+			(*udpp)->path = strdup(fname);
+			(*udpp)->path[strlen((*udpp)->path) -
+				      strlen("name")] = '\0';
+
+			sprintf(buf, "/dev/uio%d", uio_id);
+			(*udpp)->fd = open(buf, O_RDWR | O_SYNC
+					       /*| O_NONBLOCK */ );
+
+			if ((*udpp)->fd < 0) {
+				perror("open");
+				return -1;
+			}
+			(*udpp)->prev = prev_udp;
+			prev_udp = *udpp;
+			udpp = &(*udpp)->next;
+
+			n++;
+		}
 	}
 
-	if (uio_id >= MAXUIOIDS)
-		return -1;
-
-	udp->name = strdup(buf);
-	udp->path = strdup(fname);
-	udp->path[strlen(udp->path) - 4] = '\0';
-
-	sprintf(buf, "/dev/uio%d", uio_id);
-	udp->fd = open(buf, O_RDWR | O_SYNC /*| O_NONBLOCK */ );
-
-	if (udp->fd < 0) {
-		perror("open");
-		return -1;
-	}
-
-	return 0;
+	return n;
 }
 
 static int setup_uio_map(struct sh_veu_uio_device *udp, int nr,
@@ -251,54 +265,134 @@ static void set_scale(struct uio_map *ump, int vertical,
 	}
 }
 
-static int sh_veu_probe(int verbose, int force)
+/* global variables */
+static struct sh_veu_uio_device *sh_veu_uio_dev_head;
+
+static struct sh_veu_uio_device *sh_veu_destroy(struct sh_veu_uio_device *udp)
 {
-	unsigned long addr;
-	int src_w, src_h, src_bpp;
-	int dst_w, dst_h;
+	struct sh_veu_uio_device *next_udp;
+
+	free(udp->name);
+	free(udp->path);
+	if (udp->mem) {
+		munmap(udp->mem->iomem, udp->mem->size);
+		free(udp->mem);
+	}
+	if (udp->mmio) {
+		munmap(udp->mmio->iomem, udp->mmio->size);
+		free(udp->mmio);
+	}
+	close(udp->fd);
+
+	next_udp = udp->next;
+	if (udp->prev)
+		udp->prev->next = next_udp;
+	if (sh_veu_uio_dev_head == udp)
+		sh_veu_uio_dev_head = next_udp;
+	if (next_udp)
+		next_udp->prev = udp->prev;
+
+	free(udp);
+
+	return next_udp;
+}
+
+int shveu_probe(int force)
+{
+	struct sh_veu_uio_device *udp = sh_veu_uio_dev_head;
 	int ret;
+	int n;
 
-	ret = locate_sh_veu_uio_device("VEU", &sh_veu_uio_dev);
-	if (ret < 0)
-		return ret;
+	if (!force && udp) {
+		/* count up devices */
+		for (n=0; udp; n++)
+			udp = udp->next;
+		return n;
+	}
 
+	/* clean up */
+	while (udp)
+		udp = sh_veu_destroy(udp);
+
+	/* look for devices */
+	n = locate_sh_veu_uio_devices("VEU", &udp);
 #ifdef DEBUG
-	fprintf(stderr, "found matching UIO device at %s\n", sh_veu_uio_dev.path);
+	fprintf(stderr, "found matching %d UIO devices.\n", n);
 #endif
 
-	ret = setup_uio_map(&sh_veu_uio_dev, 0, &sh_veu_uio_mmio);
-	if (ret < 0)
-		return ret;
+	/* update the list head */
+	sh_veu_uio_dev_head = udp;
 
-	ret = setup_uio_map(&sh_veu_uio_dev, 1, &sh_veu_uio_mem);
-	if (ret < 0)
-		return ret;
+	/* map uio memory regions */
+	while (udp) {
+		/* register region */
+		udp->mmio = malloc(sizeof(struct uio_map));
+		if (!udp->mmio)
+			goto setup_failed;
 
-	return ret;
+		ret = setup_uio_map(udp, 0, udp->mmio);
+		if (ret < 0)
+			goto setup_failed;
+
+		/* physical continuous memory chunk */
+		udp->mem = malloc(sizeof(struct uio_map));
+		if (!udp->mem)
+			goto setup_failed;
+
+		ret = setup_uio_map(udp, 1, udp->mem);
+		if (ret < 0)
+			goto setup_failed;
+
+		udp = udp->next;
+		continue;
+
+	setup_failed:
+		udp = sh_veu_destroy(udp);
+		n--;
+
+	}
+
+	return n;
 }
 
-static int sh_veu_init(void)
+static int sh_veu_init(struct uio_map *ump)
 {
 	/* reset VEU */
-	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
+	write_reg(ump, 0x100, VBSRR);
 	return 0;
 }
 
-static void sh_veu_destroy(void)
+static struct sh_veu_uio_device *sh_veu_handle(unsigned int veu_index)
 {
+	struct sh_veu_uio_device *udp = sh_veu_uio_dev_head;
+
+	while (udp) {
+		if (veu_index == 0U)
+			break;
+		veu_index--;
+		udp = udp->next;
+	}
+
+	return udp;
 }
 
-
-int shveu_open(void)
+int shveu_open(unsigned int veu_index)
 {
-	sh_veu_probe(0, 0);
-	sh_veu_init();
+	struct sh_veu_uio_device *udp;
+
+	udp = sh_veu_handle(veu_index);
+	if (!udp)
+		return -ENODEV;
+
+	/* initialize the device */
+	sh_veu_init(udp->mmio);
 
 	return 0;
 }
 
-void shveu_close(void)
+void shveu_close(unsigned int veu_index)
 {
+	return;
 }
 
 int
@@ -318,8 +412,14 @@ shveu_start(
 	shveu_format_t dst_fmt,
 	shveu_rotation_t rotate)
 {
-	/* Ignore veu_index as we only support one VEU at the moment */
-	struct uio_map *ump = &sh_veu_uio_mmio;
+	struct sh_veu_uio_device *udp;
+	struct uio_map *ump;
+
+	udp = sh_veu_handle(veu_index);
+	if (!udp)
+		return -1;
+
+	ump = udp->mmio;
 
 #ifdef DEBUG
 	fprintf(stderr, "%s IN\n", __FUNCTION__);
@@ -337,7 +437,7 @@ shveu_start(
 		return -1;
 
 	/* reset */
-	sh_veu_init();
+	sh_veu_init(ump);
 
 	/* source */
 	write_reg(ump, (unsigned long)src_py, VSAYR);
@@ -461,7 +561,7 @@ shveu_start(
 		unsigned long enable = 1;
 		int ret;
 
-		if ((ret = write(sh_veu_uio_dev.fd, &enable,
+		if ((ret = write(udp->fd, &enable,
 		                 sizeof(u_long))) != (sizeof(u_long))) {
 			fprintf(stderr, "veu csp: write error returned %d\n", ret);
 		}
@@ -478,21 +578,28 @@ shveu_start(
 }
 
 void
-shveu_wait(
-	unsigned int veu_index)
+shveu_wait(unsigned int veu_index)
 {
 	ssize_t nread;
 
-	/* Ignore veu_index as we only support one VEU at the moment */
-	struct uio_map *ump = &sh_veu_uio_mmio;
+	struct sh_veu_uio_device *udp;
+	struct uio_map *ump;
+
+	udp = sh_veu_handle(veu_index);
+	if (!udp)
+		return;
+
+	ump = udp->mmio;
 
 	/* Wait for an interrupt */
 	{
 		unsigned long n_pending;
-		nread = read(sh_veu_uio_dev.fd, &n_pending, sizeof(u_long));
+		nread = read(udp->fd, &n_pending, sizeof(u_long));
 	}
 
 	write_reg(ump, 0x100, VEVTR);	/* ack int, write 0 to bit 0 */
+
+	return;
 }
 
 int
@@ -559,4 +666,3 @@ shveu_nv12_to_rgb565(
 		rgb565_out, 0, width, height, pitch_out, SHVEU_RGB565,
 		0);
 }
-
