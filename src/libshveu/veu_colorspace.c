@@ -355,12 +355,12 @@ shveu_start(
 	if (rotate) {
 		int src_vblk  = (src_height+15)/16;
 		int src_sidev = (src_height+15)%16 + 1;
-		int src_density = 2;	/* for RGB565 and YCbCr422 */
+		int dst_density = 2;	/* for RGB565 and YCbCr422 */
 		int offset;
 
-		if ((src_fmt & FMT_MASK) == SHVEU_YCbCr420)
-			src_density = 1;
-		offset = ((src_vblk-2)*16 + src_sidev) * src_density;
+		if ((dst_fmt & FMT_MASK) == SHVEU_YCbCr420)
+			dst_density = 1;
+		offset = ((src_vblk-2)*16 + src_sidev) * dst_density;
 
 		write_reg(ump, (unsigned long)dst_py + offset, VDAYR);
 		write_reg(ump, (unsigned long)dst_pc + offset, VDACR);
