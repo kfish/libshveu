@@ -291,7 +291,12 @@ static void sh_veu_destroy(void)
 
 int shveu_open(void)
 {
-	sh_veu_probe(0, 0);
+	int ret=0;
+
+	ret = sh_veu_probe(0, 0);
+	if (ret < 0)
+		return ret;
+
 	sh_veu_init();
 
 	return 0;
