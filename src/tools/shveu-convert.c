@@ -510,7 +510,10 @@ int main (int argc, char * argv[])
                 }
 	}
 
-        shveu_open ();
+        if (shveu_open () < 0) {
+		fprintf (stderr, "Error opening VEU\n");
+		goto exit_err;
+	}
 
 	while (1) {
 #ifdef DEBUG
