@@ -223,7 +223,9 @@ static void set_scale(struct uio_map *ump, int vertical,
 	write_reg(ump, value, VRFSR);
 
 	/* VEU3F needs additional VRPBR register handling */
+#ifdef KERNEL2_6_33
 	if (sh_veu_is_veu3f()) {
+#endif
 	    if (zoom)
 	        vb = 64;
 	    else {
@@ -248,7 +250,9 @@ static void set_scale(struct uio_map *ump, int vertical,
 	        value |= vb;
 	    }
 	    write_reg(ump, value, VRPBR);
+#ifdef KERNEL2_6_33
 	}
+#endif
 }
 
 static int sh_veu_probe(int verbose, int force)
