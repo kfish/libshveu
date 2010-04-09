@@ -38,7 +38,7 @@ usage (const char * progname)
         printf ("\nInput options\n");
         printf ("  -c, --input-colorspace (RGB565, NV12, YCbCr420, YCbCr422)\n");
         printf ("                         Specify input colorspace\n");
-        printf ("  -s, --input-size       Set the input image size (qcif, cif, qvga, vga)\n");
+        printf ("  -s, --input-size       Set the input image size (qcif, cif, qvga, vga, d1)\n");
         printf ("\nOutput options\n");
         printf ("  -o filename, --output filename\n");
         printf ("                         Specify output filename (default: stdout)\n");
@@ -46,7 +46,7 @@ usage (const char * progname)
         printf ("                         Specify output colorspace\n");
         printf ("\nTransform options\n");
 	printf ("  Note that the VEU does not support combined rotation and scaling.\n");
-        printf ("  -S, --output-size      Set the output image size (qcif, cif, qvga, vga)\n");
+        printf ("  -S, --output-size      Set the output image size (qcif, cif, qvga, vga, d1)\n");
 	printf ("                         [default is same as input size, ie. no rescaling]\n");
         printf ("  -r, --rotate           Rotate the image 90 degrees clockwise\n");
         printf ("\nMiscellaneous options\n");
@@ -99,6 +99,9 @@ int set_size (char * arg, int * w, int * h)
                 } else if (!strncasecmp (arg, "vga", 3)) {
                         *w = 640;
                         *h = 480;
+                } else if (!strncasecmp (arg, "d1", 2)) {
+                        *w = 720;
+                        *h = 480;
                 } else {
                         return -1;
                 }
@@ -121,6 +124,8 @@ static const char * show_size (int w, int h)
 		return "QVGA";
 	} else if (w == 640 && h == 480) {
 		return "VGA";
+	} else if (w == 720 && h == 480) {
+		return "D1";
 	}
 
 	return "";
@@ -274,6 +279,8 @@ static int guess_size (char * filename, int colorspace, int * w, int * h)
                         *w = 320; *h = 240;
                 } else if (size == 640*480*n/d) {
                         *w = 640; *h = 480;
+                } else if (size == 720*480*n/d) {
+                        *w = 720; *h = 480;
                 } else {
 			return -1;
 		}
