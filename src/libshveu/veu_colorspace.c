@@ -345,6 +345,35 @@ shveu_start(
 	if (rotate && (dst_width != src_height))
 		return -1;
 
+	if ((src_fmt != SHVEU_YCbCr420) &&
+	    (src_fmt != SHVEU_YCbCr422) &&
+	    (src_fmt != SHVEU_RGB565))
+		return -1;
+	if ((dst_fmt != SHVEU_YCbCr420) &&
+	    (dst_fmt != SHVEU_YCbCr422) &&
+	    (dst_fmt != SHVEU_RGB565))
+		return -1;
+
+	/* VESWR/VEDWR restrictions */
+	if ((src_pitch % 2) || (dst_pitch % 2))
+		return -1;
+
+	/* VESSR restrictions */
+	if ((src_height < 16) || (src_height > 4092) ||
+	    (src_width  < 16) || (src_width  > 4092))
+		return -1;
+
+	/* Scaling limits */
+	if (sh_veu_is_veu2h()) {
+		if ((dst_width > 8*src_width) || (dst_height > 8*src_height))
+			return -1;
+	} else {
+		if ((dst_width > 16*src_width) || (dst_height > 16*src_height))
+			return -1;
+	}
+	if ((dst_width < src_width/16) || (dst_height < src_height/16))
+		return -1;
+
 	/* reset */
 	sh_veu_init();
 
