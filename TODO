@@ -3,3 +3,17 @@ libshveu. When implementing any of these, please include an update to this TODO
 file removing that task, in the same commit.
 
 * usr /proc/cpuinfo to check for old hardware (prev-VEU5)
+
+* add rotations other than 90 (ie. 180, 270), flip etc.
+
+Simpler API
+	* replace veu_operation() with eg:
+		veu_rescale()
+		veu_crop()
+		veu_rotate()
+		etc.
+
+	* line pitch is only useful for cropping. Instead of having the user
+	supply line pitch, specify a crop rectangle.
+	[Or, is another use of line pitch to skip lines? should this be added
+	explicitly in the API?]
