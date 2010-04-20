@@ -131,14 +131,14 @@ int set_colorspace (char * arg, int * c)
         if (arg) {
                 if (!strncasecmp (arg, "rgb565", 6) ||
                     !strncasecmp (arg, "rgb", 3)) {
-                        *c = SHVEU_RGB565;
+                        *c = V4L2_PIX_FMT_RGB565;
                 } else if (!strncasecmp (arg, "YCbCr420", 8) ||
                            !strncasecmp (arg, "420", 3) ||
                            !strncasecmp (arg, "NV12", 4)) {
-                        *c = SHVEU_YCbCr420;
+                        *c = V4L2_PIX_FMT_NV12;
                 } else if (!strncasecmp (arg, "YCbCr422", 8) ||
                            !strncasecmp (arg, "422", 3)) {
-                        *c = SHVEU_YCbCr422;
+                        *c = V4L2_PIX_FMT_NV16;
                 } else {
                         return -1;
                 }
@@ -152,11 +152,11 @@ int set_colorspace (char * arg, int * c)
 static char * show_colorspace (int c)
 {
 	switch (c) {
-	case SHVEU_RGB565:
+	case V4L2_PIX_FMT_RGB565:
 		return "RGB565";
-	case SHVEU_YCbCr420:
+	case V4L2_PIX_FMT_NV12:
 		return "YCbCr420";
-	case SHVEU_YCbCr422:
+	case V4L2_PIX_FMT_NV16:
 		return "YCbCr422";
 	}
 
@@ -195,12 +195,12 @@ static off_t imgsize (int colorspace, int w, int h)
 	int n=0, d=1;
 
         switch (colorspace) {
-        case SHVEU_RGB565:
-        case SHVEU_YCbCr422:
+        case V4L2_PIX_FMT_RGB565:
+        case V4L2_PIX_FMT_NV16:
                 /* 2 bytes per pixel */
                 n=2; d=1;
 	       	break;
-       case SHVEU_YCbCr420:
+       case V4L2_PIX_FMT_NV12:
 		/* 3/2 bytes per pixel */
 		n=3; d=2;
         	break;
@@ -227,10 +227,10 @@ static int guess_colorspace (char * filename, int * c)
 	if (ext == NULL) return -1;
 
 	if (!strncasecmp (ext, ".yuv", 4)) {
-                *c = SHVEU_YCbCr420;
+                *c = V4L2_PIX_FMT_NV12;
 		return 0;
         } else if (!strncasecmp (ext, ".rgb", 4)) {
-		*c = SHVEU_RGB565;
+		*c = V4L2_PIX_FMT_RGB565;
 		return 0;
         }
 
@@ -251,12 +251,12 @@ static int guess_size (char * filename, int colorspace, int * w, int * h)
 	}
 
         switch (colorspace) {
-        case SHVEU_RGB565:
-        case SHVEU_YCbCr422:
+        case V4L2_PIX_FMT_RGB565:
+        case V4L2_PIX_FMT_NV16:
                 /* 2 bytes per pixel */
                 n=2; d=1;
 	       	break;
-       case SHVEU_YCbCr420:
+       case V4L2_PIX_FMT_NV12:
 		/* 3/2 bytes per pixel */
 		n=3; d=2;
         	break;
@@ -472,7 +472,7 @@ int main (int argc, char * argv[])
 	/* Set up memory buffers */
 	src_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, input_size, 32);
 	src_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, src_virt);
-	if (input_colorspace == SHVEU_RGB565) {
+	if (input_colorspace == V4L2_PIX_FMT_RGB565) {
 	        src_pc = 0;
 	} else {
 		src_pc = src_py + (input_w * input_h);
@@ -480,7 +480,7 @@ int main (int argc, char * argv[])
 
 	dest_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, output_size, 32);
 	dest_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, dest_virt);
-	if (output_colorspace == SHVEU_RGB565) {
+	if (output_colorspace == V4L2_PIX_FMT_RGB565) {
 	        dest_pc = 0;
 	} else {
 		dest_pc = dest_py + (output_w * output_h);

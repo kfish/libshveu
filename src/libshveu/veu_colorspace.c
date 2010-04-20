@@ -34,8 +34,6 @@
 #include "shveu/veu_colorspace.h"
 #include "shveu_regs.h"
 
-#define FMT_MASK (SHVEU_RGB565 | SHVEU_YCbCr420 | SHVEU_YCbCr422)
-
 struct uio_map {
 	unsigned long address;
 	unsigned long size;
@@ -215,13 +213,13 @@ shveu_start(
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	shveu_format_t src_fmt,
+	int src_fmt,
 	unsigned long dst_py,
 	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	shveu_format_t dst_fmt,
+	int dst_fmt,
 	shveu_rotation_t rotate)
 {
 	struct veu *pvt = veu;
@@ -242,13 +240,13 @@ shveu_start(
 	if (rotate && (dst_width != src_height))
 		return -1;
 
-	if ((src_fmt != SHVEU_YCbCr420) &&
-	    (src_fmt != SHVEU_YCbCr422) &&
-	    (src_fmt != SHVEU_RGB565))
+	if ((src_fmt != V4L2_PIX_FMT_NV12) &&
+	    (src_fmt != V4L2_PIX_FMT_NV16) &&
+	    (src_fmt != V4L2_PIX_FMT_RGB565))
 		return -1;
-	if ((dst_fmt != SHVEU_YCbCr420) &&
-	    (dst_fmt != SHVEU_YCbCr422) &&
-	    (dst_fmt != SHVEU_RGB565))
+	if ((dst_fmt != V4L2_PIX_FMT_NV12) &&
+	    (dst_fmt != V4L2_PIX_FMT_NV16) &&
+	    (dst_fmt != V4L2_PIX_FMT_RGB565))
 		return -1;
 
 	/* VESWR/VEDWR restrictions */
@@ -271,6 +269,7 @@ shveu_start(
 	if ((dst_width < src_width/16) || (dst_height < src_height/16))
 		return -1;
 
+
 	uiomux_lock (pvt->uiomux, UIOMUX_SH_VEU);
 
 	/* reset */
@@ -282,7 +281,7 @@ shveu_start(
 
 	write_reg(ump, (src_height << 16) | src_width, VESSR);
 
-	if (src_fmt == SHVEU_RGB565)
+	if (src_fmt == V4L2_PIX_FMT_RGB565)
 		src_pitch *= 2;
 	write_reg(ump, src_pitch, VESWR);
 	write_reg(ump, 0, VBSSR);	/* not using bundle mode */
@@ -295,7 +294,7 @@ shveu_start(
 		int dst_density = 2;	/* for RGB565 and YCbCr422 */
 		int offset;
 
-		if ((dst_fmt & FMT_MASK) == SHVEU_YCbCr420)
+		if (dst_fmt == V4L2_PIX_FMT_NV12)
 			dst_density = 1;
 		offset = ((src_vblk-2)*16 + src_sidev) * dst_density;
 
@@ -306,18 +305,18 @@ shveu_start(
 		write_reg(ump, (unsigned long)dst_pc, VDACR);
 	}
 
-	if (dst_fmt == SHVEU_RGB565)
+	if (dst_fmt == V4L2_PIX_FMT_RGB565)
 		dst_pitch *= 2;
 	write_reg(ump, dst_pitch, VEDWR);
 
 	/* byte/word swapping */
 	{
 		unsigned long vswpr = 0;
-		if (src_fmt == SHVEU_RGB565)
+		if (src_fmt == V4L2_PIX_FMT_RGB565)
 			vswpr |= 0x6;
 		else
 			vswpr |= 0x7;
-		if (dst_fmt == SHVEU_RGB565)
+		if (dst_fmt == V4L2_PIX_FMT_RGB565)
 			vswpr |= 0x60;
 		else
 			vswpr |= 0x70;
@@ -331,32 +330,28 @@ shveu_start(
 	/* transform control */
 	{
 		unsigned long vtrcr = 0;
-		if ((src_fmt & FMT_MASK) == SHVEU_RGB565) {
+		if (src_fmt == V4L2_PIX_FMT_RGB565) {
 			vtrcr |= VTRCR_RY_SRC_RGB;
 			vtrcr |= VTRCR_SRC_FMT_RGB565;
 		} else {
 			vtrcr |= VTRCR_RY_SRC_YCBCR;
-			if ((src_fmt & FMT_MASK) == SHVEU_YCbCr420)
+			if (src_fmt == V4L2_PIX_FMT_NV12)
 				vtrcr |= VTRCR_SRC_FMT_YCBCR420;
 			else
 				vtrcr |= VTRCR_SRC_FMT_YCBCR422;
 		}
 
-		if ((dst_fmt & FMT_MASK) == SHVEU_RGB565) {
+		if (dst_fmt == V4L2_PIX_FMT_RGB565) {
 			vtrcr |= VTRCR_DST_FMT_RGB565;
 		} else {
-			if ((dst_fmt & FMT_MASK) == SHVEU_YCbCr420)
+			if (dst_fmt == V4L2_PIX_FMT_NV12)
 				vtrcr |= VTRCR_DST_FMT_YCBCR420;
 			else
 				vtrcr |= VTRCR_DST_FMT_YCBCR422;
 		}
 
-		if ((src_fmt & FMT_MASK) != (dst_fmt & FMT_MASK)) {
+		if (src_fmt != dst_fmt) {
 			vtrcr |= VTRCR_TE_BIT_SET;
-			if ((src_fmt & YCBCR_FULL_RANGE) || (dst_fmt & YCBCR_FULL_RANGE))
-				vtrcr |= VTRCR_FULL_COLOR_CONV;
-			if ((src_fmt & YCBCR_BT709) || (dst_fmt & YCBCR_BT709))
-				vtrcr |= VTRCR_BT709;
 		}
 		write_reg(ump, vtrcr, VTRCR);
 #if DEBUG
@@ -432,13 +427,13 @@ shveu_operation(
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	shveu_format_t src_fmt,
+	int src_fmt,
 	unsigned long dst_py,
 	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	shveu_format_t dst_fmt,
+	int dst_fmt,
 	shveu_rotation_t rotate)
 {
 	int ret = 0;

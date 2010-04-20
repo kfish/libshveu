@@ -24,19 +24,14 @@
 #ifndef __VEU_COLORSPACE_H__
 #define __VEU_COLORSPACE_H__
 
+#include <linux/videodev2.h>	/* For pixel formats */
+
+
 /** Rotation */
 typedef enum {
 	SHVEU_NO_ROT=0,	/**< No rotation */
 	SHVEU_ROT_90,	/**< Rotate 90 degrees clockwise */
 } shveu_rotation_t;
-
-/** Image formats */
-typedef enum {
-	
-	SHVEU_RGB565=0,	/**< RGB565 */
-	SHVEU_YCbCr420,	/**< YCbCr 4:2:0 */
-	SHVEU_YCbCr422,	/**< YCbCr 4:2:2 */
-} shveu_format_t;
 
 /** Start a (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
  * \param veu VEU handle
@@ -45,13 +40,13 @@ typedef enum {
  * \param src_width Width in pixels of source image
  * \param src_height Height in pixels of source image
  * \param src_pitch Line pitch of source image
- * \param src_format Format of source image
+ * \param src_format Format of source image  (V4L2_PIX_FMT_NV12, V4L2_PIX_FMT_NV16, V4L2_PIX_FMT_RGB565)
  * \param dst_py Physical address of Y or RGB plane of destination image
  * \param dst_pc Physical address of CbCr plane of destination image (ignored for RGB)
  * \param dst_width Width in pixels of destination image
  * \param dst_height Height in pixels of destination image
  * \param dst_pitch Line pitch of destination image
- * \param dst_fmt Format of destination image
+ * \param dst_fmt Format of destination image (V4L2_PIX_FMT_NV12, V4L2_PIX_FMT_NV16, V4L2_PIX_FMT_RGB565)
  * \param rotate Rotation to apply
  * \retval 0 Success
  * \retval -1 Error: Attempt to perform simultaneous scaling and rotation
@@ -64,13 +59,13 @@ shveu_start(
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	shveu_format_t src_fmt,
+	int src_fmt,
 	unsigned long dst_py,
 	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	shveu_format_t dst_fmt,
+	int dst_fmt,
 	shveu_rotation_t rotate);
 
 /** Wait for a VEU operation to complete. The operation is started by a call to shveu_start.
@@ -86,13 +81,13 @@ shveu_wait(void *veu);
  * \param src_width Width in pixels of source image
  * \param src_height Height in pixels of source image
  * \param src_pitch Line pitch of source image
- * \param src_format Format of source image
+ * \param src_format Format of source image (V4L2_PIX_FMT_NV12, V4L2_PIX_FMT_NV16, V4L2_PIX_FMT_RGB565)
  * \param dst_py Physical address of Y or RGB plane of destination image
  * \param dst_pc Physical address of CbCr plane of destination image (ignored for RGB)
  * \param dst_width Width in pixels of destination image
  * \param dst_height Height in pixels of destination image
  * \param dst_pitch Line pitch of destination image
- * \param dst_fmt Format of destination image
+ * \param dst_fmt Format of destination image (V4L2_PIX_FMT_NV12, V4L2_PIX_FMT_NV16, V4L2_PIX_FMT_RGB565)
  * \param rotate Rotation to apply
  * \retval 0 Success
  * \retval -1 Error: Attempt to perform simultaneous scaling and rotation
@@ -105,13 +100,13 @@ shveu_operation(
 	unsigned long src_width,
 	unsigned long src_height,
 	unsigned long src_pitch,
-	shveu_format_t src_fmt,
+	int src_fmt,
 	unsigned long dst_py,
 	unsigned long dst_pc,
 	unsigned long dst_width,
 	unsigned long dst_height,
 	unsigned long dst_pitch,
-	shveu_format_t dst_fmt,
+	int dst_fmt,
 	shveu_rotation_t rotate);
 
 

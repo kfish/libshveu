@@ -20,15 +20,6 @@
 #ifndef __SHVEU_REGS_H__
 #define __SHVEU_REGS_H__
 
-#define YCBCR_COMP_RANGE (0 << 16)
-#define YCBCR_FULL_RANGE (1 << 16)
-#define YCBCR_BT601      (0 << 17)
-#define YCBCR_BT709      (1 << 17)
-
-#define SH_VEU_RESERVE_TOP (512 << 10)
-#define YUV_COLOR
-#define CACHED_UV
-
 #define VESTR 0x00		/* start register */
 #define VESWR 0x10		/* src: line length */
 #define VESSR 0x14		/* src: image size */
