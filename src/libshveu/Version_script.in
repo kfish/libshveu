@@ -10,9 +10,10 @@
         global:
 		shveu_open;
 		shveu_close;
-		shveu_operation;
-		shveu_rgb565_to_nv12;
-		shveu_nv12_to_rgb565;
+		shveu_start_locked;
+		shveu_wait;
+		shveu_rescale;
+		shveu_rotate;
 		
         local:
                 *;

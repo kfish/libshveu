@@ -32,7 +32,6 @@
 
 #include <uiomux/uiomux.h>
 #include "shveu/shveu.h"
-#include "shveu/veu_colorspace.h"
 #include "shveu_regs.h"
 
 struct uio_map {
@@ -205,7 +204,7 @@ err:
 }
 
 int
-shveu_start(
+shveu_start_locked(
 	SHVEU *pvt,
 	unsigned long src_py,
 	unsigned long src_pc,
@@ -324,7 +323,6 @@ shveu_start(
 #endif
 	}
 
-
 	/* transform control */
 	{
 		unsigned long vtrcr = 0;
@@ -416,7 +414,37 @@ shveu_wait(SHVEU *pvt)
 }
 
 int
-shveu_operation(
+shveu_rescale(
+	SHVEU *veu,
+	unsigned long src_py,
+	unsigned long src_pc,
+	unsigned long src_width,
+	unsigned long src_height,
+	unsigned long src_pitch,
+	int src_fmt,
+	unsigned long dst_py,
+	unsigned long dst_pc,
+	unsigned long dst_width,
+	unsigned long dst_height,
+	unsigned long dst_pitch,
+	int dst_fmt)
+{
+	int ret = 0;
+
+	ret = shveu_start_locked(
+		veu,
+		src_py, src_pc, src_width, src_height, src_pitch, src_fmt,
+		dst_py, dst_pc, dst_width, dst_height, dst_pitch, dst_fmt,
+		SHVEU_NO_ROT);
+
+	if (ret == 0)
+		shveu_wait(veu);
+
+	return ret;
+}
+
+int
+shveu_rotate(
 	SHVEU *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
@@ -434,7 +462,7 @@ shveu_operation(
 {
 	int ret = 0;
 
-	ret = shveu_start(
+	ret = shveu_start_locked(
 		veu,
 		src_py, src_pc, src_width, src_height, src_pitch, src_fmt,
 		dst_py, dst_pc, dst_width, dst_height, dst_pitch, dst_fmt,

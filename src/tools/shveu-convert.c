@@ -298,7 +298,7 @@ int main (int argc, char * argv[])
 	size_t input_size, output_size;
 	unsigned char * src_virt, * dest_virt;
 	unsigned long src_py, src_pc, dest_py, dest_pc;
-	void *veu;
+	SHVEU *veu;
 	int ret;
 	int frameno=0;
 
@@ -530,14 +530,16 @@ int main (int argc, char * argv[])
 			}
 		}
 
-		ret = shveu_operation (veu, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
-				                  dest_py, dest_pc, output_w, output_h, output_w, output_colorspace,
-					          rotation);
+		ret = shveu_start_locked (veu,
+				src_py,  src_pc,  input_w,  input_h,  input_w,  input_colorspace,
+				dest_py, dest_pc, output_w, output_h, output_w, output_colorspace,
+				rotation);
 
 		if (ret == -1) {
 			fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
 			goto exit_err;
 		}
+		shveu_wait(veu);
 
 		/* Write output */
 		if (outfile && fwrite (dest_virt, 1, output_size, outfile) != output_size) {
