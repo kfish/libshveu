@@ -42,32 +42,11 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <uiomux/uiomux.h>
 #include "shveu/veu_colorspace.h"
-
 #include "shveu_regs.h"
 
 #define FMT_MASK (SHVEU_RGB565 | SHVEU_YCbCr420 | SHVEU_YCbCr422)
-
-static int fgets_with_openclose(char *fname, char *buf, size_t maxlen)
-{
-	FILE *fp;
-	char * s;
-
-	if ((fp = fopen(fname, "r")) != NULL) {
-		s = fgets(buf, maxlen, fp);
-		fclose(fp);
-		if (s == NULL) return -1;
-		return strlen(buf);
-	} else {
-		return -1;
-	}
-}
-
-struct sh_veu_uio_device {
-	char *name;
-	char *path;
-	int fd;
-};
 
 struct uio_map {
 	unsigned long address;
@@ -76,71 +55,9 @@ struct uio_map {
 };
 
 
-#define MAXUIOIDS  100
-#define MAXNAMELEN 256
-
-static int locate_sh_veu_uio_device(char *name,
-				    struct sh_veu_uio_device *udp)
-{
-	char fname[MAXNAMELEN], buf[MAXNAMELEN];
-	int uio_id, i;
-
-	for (uio_id = 0; uio_id < MAXUIOIDS; uio_id++) {
-		sprintf(fname, "/sys/class/uio/uio%d/name", uio_id);
-		if (fgets_with_openclose(fname, buf, MAXNAMELEN) < 0)
-			continue;
-		if (strncmp(name, buf, strlen(name)) == 0)
-			break;
-	}
-
-	if (uio_id >= MAXUIOIDS)
-		return -1;
-
-	udp->name = strdup(buf);
-	udp->path = strdup(fname);
-	udp->path[strlen(udp->path) - 4] = '\0';
-
-	sprintf(buf, "/dev/uio%d", uio_id);
-	udp->fd = open(buf, O_RDWR | O_SYNC /*| O_NONBLOCK */ );
-
-	if (udp->fd < 0) {
-		perror("open");
-		return -1;
-	}
-
-	return 0;
-}
-
-static int setup_uio_map(struct sh_veu_uio_device *udp, int nr,
-			 struct uio_map *ump)
-{
-	char fname[MAXNAMELEN], buf[MAXNAMELEN];
-
-	sprintf(fname, "%s/maps/map%d/addr", udp->path, nr);
-	if (fgets_with_openclose(fname, buf, MAXNAMELEN) <= 0)
-		return -1;
-
-	ump->address = strtoul(buf, NULL, 0);
-
-	sprintf(fname, "%s/maps/map%d/size", udp->path, nr);
-	if (fgets_with_openclose(fname, buf, MAXNAMELEN) <= 0)
-		return -1;
-
-	ump->size = strtoul(buf, NULL, 0);
-
-	ump->iomem = mmap(0, ump->size,
-			  PROT_READ | PROT_WRITE, MAP_SHARED,
-			  udp->fd, nr * getpagesize());
-
-	if (ump->iomem == MAP_FAILED)
-		return -1;
-
-	return 0;
-}
-
 /* global variables */
-struct sh_veu_uio_device sh_veu_uio_dev;
 struct uio_map sh_veu_uio_mmio, sh_veu_uio_mem;
+UIOMux *uiomux;
 
 /* Helper functions for reading registers. */
 
@@ -257,28 +174,27 @@ static void set_scale(struct uio_map *ump, int vertical,
 
 static int sh_veu_probe(int verbose, int force)
 {
-	unsigned long addr;
-	int src_w, src_h, src_bpp;
-	int dst_w, dst_h;
 	int ret;
 
-	ret = locate_sh_veu_uio_device("VEU", &sh_veu_uio_dev);
-	if (ret < 0)
-		return ret;
+	uiomux = uiomux_open();
+	if (!uiomux)
+		return errno;
 
-#ifdef DEBUG
-	fprintf(stderr, "found matching UIO device at %s\n", sh_veu_uio_dev.path);
-#endif
+	ret = uiomux_get_mmio (uiomux, UIOMUX_SH_VEU,
+		&sh_veu_uio_mmio.address,
+		&sh_veu_uio_mmio.size,
+		&sh_veu_uio_mmio.iomem);
+	if (!ret)
+		return errno;
 
-	ret = setup_uio_map(&sh_veu_uio_dev, 0, &sh_veu_uio_mmio);
-	if (ret < 0)
-		return ret;
+	ret = uiomux_get_mem (uiomux, UIOMUX_SH_VEU,
+		&sh_veu_uio_mem.address,
+		&sh_veu_uio_mem.size,
+		&sh_veu_uio_mem.iomem);
+	if (!ret)
+		return errno;
 
-	ret = setup_uio_map(&sh_veu_uio_dev, 1, &sh_veu_uio_mem);
-	if (ret < 0)
-		return ret;
-
-	return ret;
+	return 0;
 }
 
 static int sh_veu_init(void)
@@ -287,11 +203,6 @@ static int sh_veu_init(void)
 	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
 	return 0;
 }
-
-static void sh_veu_destroy(void)
-{
-}
-
 
 int shveu_open(void)
 {
@@ -308,6 +219,8 @@ int shveu_open(void)
 
 void shveu_close(void)
 {
+	uiomux_close(uiomux);
+	uiomux = NULL;
 }
 
 int
@@ -499,17 +412,6 @@ shveu_start(
 	/* enable interrupt in VEU */
 	write_reg(ump, 1, VEIER);
 
-	/* Enable interrupt in UIO driver */
-	{
-		unsigned long enable = 1;
-		int ret;
-
-		if ((ret = write(sh_veu_uio_dev.fd, &enable,
-		                 sizeof(u_long))) != (sizeof(u_long))) {
-			fprintf(stderr, "veu csp: write error returned %d\n", ret);
-		}
-	}
-
 	/* start operation */
 	write_reg(ump, 1, VESTR);
 
@@ -521,21 +423,10 @@ shveu_start(
 }
 
 void
-shveu_wait(
-	unsigned int veu_index)
+shveu_wait(unsigned int veu_index)
 {
-	ssize_t nread;
-
-	/* Ignore veu_index as we only support one VEU at the moment */
-	struct uio_map *ump = &sh_veu_uio_mmio;
-
-	/* Wait for an interrupt */
-	{
-		unsigned long n_pending;
-		nread = read(sh_veu_uio_dev.fd, &n_pending, sizeof(u_long));
-	}
-
-	write_reg(ump, 0x100, VEVTR);	/* ack int, write 0 to bit 0 */
+	uiomux_sleep(uiomux, UIOMUX_SH_VEU);
+	write_reg(&sh_veu_uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
 }
 
 int
