@@ -409,6 +409,11 @@ shveu_wait(unsigned int veu_index)
 {
 	uiomux_sleep(uiomux, UIOMUX_SH_VEU);
 	write_reg(&sh_veu_uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
+
+	/* Wait for VEU to stop */
+	while (read_reg(&pvt->uio_mmio, VSTAR) & 1)
+		;
+
 	uiomux_unlock(uiomux, UIOMUX_SH_VEU);
 }
 
