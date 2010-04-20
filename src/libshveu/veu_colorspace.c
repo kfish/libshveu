@@ -172,7 +172,7 @@ static void set_scale(struct uio_map *ump, int vertical,
 #endif
 }
 
-static int sh_veu_probe(int verbose, int force)
+int shveu_open(void)
 {
 	int ret;
 
@@ -193,24 +193,6 @@ static int sh_veu_probe(int verbose, int force)
 		&sh_veu_uio_mem.iomem);
 	if (!ret)
 		return errno;
-
-	return 0;
-}
-
-static int sh_veu_init(void)
-{
-	/* reset VEU */
-	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
-	return 0;
-}
-
-int shveu_open(void)
-{
-	int ret=0;
-
-	ret = sh_veu_probe(0, 0);
-	if (ret < 0)
-		return ret;
 
 	return 0;
 }
@@ -288,7 +270,7 @@ shveu_start(
 	uiomux_lock (uiomux, UIOMUX_SH_VEU);
 
 	/* reset */
-	sh_veu_init();
+	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
 
 	/* source */
 	write_reg(ump, (unsigned long)src_py, VSAYR);
