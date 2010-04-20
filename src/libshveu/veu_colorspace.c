@@ -212,8 +212,6 @@ int shveu_open(void)
 	if (ret < 0)
 		return ret;
 
-	sh_veu_init();
-
 	return 0;
 }
 
@@ -286,6 +284,8 @@ shveu_start(
 	}
 	if ((dst_width < src_width/16) || (dst_height < src_height/16))
 		return -1;
+
+	uiomux_lock (uiomux, UIOMUX_SH_VEU);
 
 	/* reset */
 	sh_veu_init();
@@ -427,6 +427,7 @@ shveu_wait(unsigned int veu_index)
 {
 	uiomux_sleep(uiomux, UIOMUX_SH_VEU);
 	write_reg(&sh_veu_uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
+	uiomux_unlock(uiomux, UIOMUX_SH_VEU);
 }
 
 int

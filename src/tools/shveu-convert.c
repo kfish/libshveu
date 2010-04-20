@@ -530,11 +530,9 @@ int main (int argc, char * argv[])
 			}
 		}
 
-		uiomux_lock (uiomux, UIOMUX_SH_VEU);
 		ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
 				                  dest_py, dest_pc, output_w, output_h, output_w, output_colorspace,
 					          rotation);
-		uiomux_unlock (uiomux, UIOMUX_SH_VEU);
 
 		if (ret == -1) {
 			fprintf (stderr, "Illegal operation: cannot combine rotation and scaling\n");
