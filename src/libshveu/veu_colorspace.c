@@ -28,18 +28,6 @@
 #endif
 
 #include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <linux/fb.h>
-#include <pthread.h>
-#include <semaphore.h>
-
-#include <inttypes.h>
-#include <unistd.h>
 #include <errno.h>
 
 #include <uiomux/uiomux.h>
@@ -54,10 +42,12 @@ struct uio_map {
 	void *iomem;
 };
 
+struct veu {
+	UIOMux *uiomux;
+	struct uio_map uio_mmio;
+	struct uio_map uio_mem;
+};
 
-/* global variables */
-struct uio_map sh_veu_uio_mmio, sh_veu_uio_mem;
-UIOMux *uiomux;
 
 /* Helper functions for reading registers. */
 
@@ -75,14 +65,14 @@ static void write_reg(struct uio_map *ump, unsigned long value, int reg_nr)
 	*reg = value;
 }
 
-static int sh_veu_is_veu2h(void)
+static int sh_veu_is_veu2h(struct uio_map *ump)
 {
-	return sh_veu_uio_mmio.size == 0x27c;
+	return ump->size == 0x27c;
 }
 
-static int sh_veu_is_veu3f(void)
+static int sh_veu_is_veu3f(struct uio_map *ump)
 {
-	return sh_veu_uio_mmio.size == 0xcc;
+	return ump->size == 0xcc;
 }
 
 static void set_scale(struct uio_map *ump, int vertical,
@@ -141,7 +131,7 @@ static void set_scale(struct uio_map *ump, int vertical,
 
 	/* VEU3F needs additional VRPBR register handling */
 #ifdef KERNEL2_6_33
-	if (sh_veu_is_veu3f()) {
+	if (sh_veu_is_veu3f(ump)) {
 #endif
 	    if (zoom)
 	        vb = 64;
@@ -172,40 +162,54 @@ static void set_scale(struct uio_map *ump, int vertical,
 #endif
 }
 
-int shveu_open(void)
+void shveu_close(void *veu)
 {
-	int ret;
+	struct veu *pvt = veu;
 
-	uiomux = uiomux_open();
-	if (!uiomux)
-		return errno;
-
-	ret = uiomux_get_mmio (uiomux, UIOMUX_SH_VEU,
-		&sh_veu_uio_mmio.address,
-		&sh_veu_uio_mmio.size,
-		&sh_veu_uio_mmio.iomem);
-	if (!ret)
-		return errno;
-
-	ret = uiomux_get_mem (uiomux, UIOMUX_SH_VEU,
-		&sh_veu_uio_mem.address,
-		&sh_veu_uio_mem.size,
-		&sh_veu_uio_mem.iomem);
-	if (!ret)
-		return errno;
-
-	return 0;
+	if (pvt) {
+		if (pvt->uiomux)
+			uiomux_close(pvt->uiomux);
+		free(pvt);
+	}
 }
 
-void shveu_close(void)
+void *shveu_open(void)
 {
-	uiomux_close(uiomux);
-	uiomux = NULL;
+	struct veu *veu;
+	int ret;
+
+	veu = calloc(1, sizeof(*veu));
+	if (!veu)
+		goto err;
+
+	veu->uiomux = uiomux_open();
+	if (!veu->uiomux)
+		goto err;
+
+	ret = uiomux_get_mmio (veu->uiomux, UIOMUX_SH_VEU,
+		&veu->uio_mmio.address,
+		&veu->uio_mmio.size,
+		&veu->uio_mmio.iomem);
+	if (!ret)
+		goto err;
+
+	ret = uiomux_get_mem (veu->uiomux, UIOMUX_SH_VEU,
+		&veu->uio_mem.address,
+		&veu->uio_mem.size,
+		&veu->uio_mem.iomem);
+	if (!ret)
+		goto err;
+
+	return veu;
+
+err:
+	shveu_close(veu);
+	return 0;
 }
 
 int
 shveu_start(
-	unsigned int veu_index,
+	void *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -220,8 +224,8 @@ shveu_start(
 	shveu_format_t dst_fmt,
 	shveu_rotation_t rotate)
 {
-	/* Ignore veu_index as we only support one VEU at the moment */
-	struct uio_map *ump = &sh_veu_uio_mmio;
+	struct veu *pvt = veu;
+	struct uio_map *ump = &pvt->uio_mmio;
 
 #ifdef DEBUG
 	fprintf(stderr, "%s IN\n", __FUNCTION__);
@@ -257,7 +261,7 @@ shveu_start(
 		return -1;
 
 	/* Scaling limits */
-	if (sh_veu_is_veu2h()) {
+	if (sh_veu_is_veu2h(ump)) {
 		if ((dst_width > 8*src_width) || (dst_height > 8*src_height))
 			return -1;
 	} else {
@@ -267,10 +271,10 @@ shveu_start(
 	if ((dst_width < src_width/16) || (dst_height < src_height/16))
 		return -1;
 
-	uiomux_lock (uiomux, UIOMUX_SH_VEU);
+	uiomux_lock (pvt->uiomux, UIOMUX_SH_VEU);
 
 	/* reset */
-	write_reg(&sh_veu_uio_mmio, 0x100, VBSRR);
+	write_reg(ump, 0x100, VBSRR);
 
 	/* source */
 	write_reg(ump, (unsigned long)src_py, VSAYR);
@@ -361,7 +365,7 @@ shveu_start(
 	}
 
 	/* Is this a VEU2H on SH7723? */
-	if (sh_veu_is_veu2h()) {
+	if (sh_veu_is_veu2h(ump)) {
 		/* color conversion matrix */
 		write_reg(ump, 0x0cc5, VMCR00);
 		write_reg(ump, 0x0950, VMCR01);
@@ -406,21 +410,23 @@ shveu_start(
 }
 
 void
-shveu_wait(unsigned int veu_index)
+shveu_wait(void *veu)
 {
-	uiomux_sleep(uiomux, UIOMUX_SH_VEU);
-	write_reg(&sh_veu_uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
+	struct veu *pvt = veu;
+
+	uiomux_sleep(pvt->uiomux, UIOMUX_SH_VEU);
+	write_reg(&pvt->uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
 
 	/* Wait for VEU to stop */
 	while (read_reg(&pvt->uio_mmio, VSTAR) & 1)
 		;
 
-	uiomux_unlock(uiomux, UIOMUX_SH_VEU);
+	uiomux_unlock(pvt->uiomux, UIOMUX_SH_VEU);
 }
 
 int
 shveu_operation(
-	unsigned int veu_index,
+	void *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -438,48 +444,14 @@ shveu_operation(
 	int ret = 0;
 
 	ret = shveu_start(
-		veu_index,
+		veu,
 		src_py, src_pc, src_width, src_height, src_pitch, src_fmt,
 		dst_py, dst_pc, dst_width, dst_height, dst_pitch, dst_fmt,
 		rotate);
 
 	if (ret == 0)
-		shveu_wait(veu_index);
+		shveu_wait(veu);
 
 	return ret;
-}
-
-
-
-int
-shveu_rgb565_to_nv12 (
-	unsigned long rgb565_in,
-	unsigned long y_out,
-	unsigned long c_out,
-	unsigned long width,
-	unsigned long height)
-{
-	return shveu_operation(
-		0,
-		rgb565_in, 0,  width, height, width, SHVEU_RGB565,
-		y_out,     c_out, width, height, width, SHVEU_YCbCr420,
-		0);
-}
-
-int
-shveu_nv12_to_rgb565(
-	unsigned long y_in,
-	unsigned long c_in,
-	unsigned long rgb565_out,
-	unsigned long width,
-	unsigned long height,
-	unsigned long pitch_in,
-	unsigned long pitch_out)
-{
-	return shveu_operation(
-		0,
-		y_in,       c_in, width, height, pitch_in,  SHVEU_YCbCr420,
-		rgb565_out, 0, width, height, pitch_out, SHVEU_RGB565,
-		0);
 }
 

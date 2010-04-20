@@ -39,7 +39,7 @@ typedef enum {
 } shveu_format_t;
 
 /** Start a (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
- * \param veu_index Index of which VEU to use
+ * \param veu VEU handle
  * \param src_py Physical address of Y or RGB plane of source image
  * \param src_pc Physical address of CbCr plane of source image (ignored for RGB)
  * \param src_width Width in pixels of source image
@@ -58,7 +58,7 @@ typedef enum {
  */
 int
 shveu_start(
-	unsigned int veu_index,
+	void *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -74,13 +74,13 @@ shveu_start(
 	shveu_rotation_t rotate);
 
 /** Wait for a VEU operation to complete. The operation is started by a call to shveu_start.
- * \param veu_index Index of which VEU to use
+ * \param veu VEU handle
  */
 void
-shveu_wait(unsigned int veu_index);
+shveu_wait(void *veu);
 
 /** Perform (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
- * \param veu_index Index of which VEU to use
+ * \param veu VEU handle
  * \param src_py Physical address of Y or RGB plane of source image
  * \param src_pc Physical address of CbCr plane of source image (ignored for RGB)
  * \param src_width Width in pixels of source image
@@ -99,7 +99,7 @@ shveu_wait(unsigned int veu_index);
  */
 int
 shveu_operation(
-	unsigned int veu_index,
+	void *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -113,41 +113,6 @@ shveu_operation(
 	unsigned long dst_pitch,
 	shveu_format_t dst_fmt,
 	shveu_rotation_t rotate);
-
-/** Perform scale from RG565 to YCbCr 4:2:0 surface
- * \param rgb565_in Physical address of input RGB565 image
- * \param y_out Physical address of output Y plane
- * \param c_out Physical address of output CbCr plane
- * \param width Width in pixels of image
- * \param height Height in pixels of image
- * \retval 0 Success
- */
-int shveu_rgb565_to_nv12(
-	unsigned long rgb565_in,
-	unsigned long y_out,
-	unsigned long c_out,
-	unsigned long width,
-	unsigned long height);
-
-/** Perform color conversion & crop from YCbCr 4:2:0 to RG565 surface
- * \param y_in Physical address of input Y plane
- * \param c_in Physical addrses of input CbCr plane
- * \param rgb565_out Physical address of output RGB565 image
- * \param width Width in pixels of image
- * \param height Height in pixels of image
- * \param pitch_in Line pitch of input image
- * \param pitch_out Line pitch of output image
- * \retval 0 Success
- */
-int
-shveu_nv12_to_rgb565(
-	unsigned long y_in,
-	unsigned long c_in,
-	unsigned long rgb565_out,
-	unsigned long width,
-	unsigned long height,
-	unsigned long pitch_in,
-	unsigned long pitch_out);
 
 
 #endif				/* __VEU_COLORSPACE_H__ */

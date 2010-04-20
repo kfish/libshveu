@@ -298,7 +298,7 @@ int main (int argc, char * argv[])
 	size_t input_size, output_size;
 	unsigned char * src_virt, * dest_virt;
 	unsigned long src_py, src_pc, dest_py, dest_pc;
-	int veu_index=0;
+	void *veu;
 	int ret;
 	int frameno=0;
 
@@ -510,7 +510,7 @@ int main (int argc, char * argv[])
                 }
 	}
 
-        if (shveu_open () < 0) {
+        if ((veu = shveu_open ()) == 0) {
 		fprintf (stderr, "Error opening VEU\n");
 		goto exit_err;
 	}
@@ -530,7 +530,7 @@ int main (int argc, char * argv[])
 			}
 		}
 
-		ret = shveu_operation (veu_index, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
+		ret = shveu_operation (veu, src_py, src_pc, input_w, input_h, input_w, input_colorspace,
 				                  dest_py, dest_pc, output_w, output_h, output_w, output_colorspace,
 					          rotation);
 
@@ -548,7 +548,7 @@ int main (int argc, char * argv[])
 		frameno++;
 	}
 
-        shveu_close ();
+        shveu_close (veu);
 
 	uiomux_free (uiomux, UIOMUX_SH_VEU, src_virt, input_size);
 	uiomux_free (uiomux, UIOMUX_SH_VEU, dest_virt, output_size);

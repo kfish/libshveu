@@ -45,7 +45,7 @@ AM_CONFIG_HEADER(config.h)
 #     then set AGE to 0.                                                       #
 #                                                                              #
 ################################################################################
-SHARED_VERSION_INFO="2:0:0"
+SHARED_VERSION_INFO="3:0:0"
 SHLIB_VERSION_ARG=""
 
 # Checks for programs.

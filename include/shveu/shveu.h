@@ -86,14 +86,15 @@ extern "C" {
 
 /**
  * Open a VEU device.
- * \retval 0 Success
+ * \retval 0 Failure, otherwise VEU handle
  */
-int shveu_open(void);
+void *shveu_open(void);
 
 /**
  * Close a VEU device.
+ * \param veu VEU handle
  */
-void shveu_close(void);
+void shveu_close(void *veu);
 
 #include <shveu/veu_colorspace.h>
 
