@@ -379,7 +379,7 @@ shveu_start(
 	}
 
 	/* Is this a VEU2H on SH7723? */
-	if (ump->size > VBSRR) {
+	if (sh_veu_is_veu2h()) {
 		/* color conversion matrix */
 		write_reg(ump, 0x0cc5, VMCR00);
 		write_reg(ump, 0x0950, VMCR01);
