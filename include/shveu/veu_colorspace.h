@@ -53,7 +53,7 @@ typedef enum {
  */
 int
 shveu_start(
-	void *veu,
+	SHVEU *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -72,7 +72,7 @@ shveu_start(
  * \param veu VEU handle
  */
 void
-shveu_wait(void *veu);
+shveu_wait(SHVEU *veu);
 
 /** Perform (scale|rotate) & crop between YCbCr 4:2:0 & RG565 surfaces
  * \param veu VEU handle
@@ -94,7 +94,7 @@ shveu_wait(void *veu);
  */
 int
 shveu_operation(
-	void *veu,
+	SHVEU *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,

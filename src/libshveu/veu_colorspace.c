@@ -31,6 +31,7 @@
 #include <errno.h>
 
 #include <uiomux/uiomux.h>
+#include "shveu/shveu.h"
 #include "shveu/veu_colorspace.h"
 #include "shveu_regs.h"
 
@@ -40,7 +41,7 @@ struct uio_map {
 	void *iomem;
 };
 
-struct veu {
+struct SHVEU {
 	UIOMux *uiomux;
 	struct uio_map uio_mmio;
 	struct uio_map uio_mem;
@@ -160,10 +161,8 @@ static void set_scale(struct uio_map *ump, int vertical,
 #endif
 }
 
-void shveu_close(void *veu)
+void shveu_close(SHVEU *pvt)
 {
-	struct veu *pvt = veu;
-
 	if (pvt) {
 		if (pvt->uiomux)
 			uiomux_close(pvt->uiomux);
@@ -171,9 +170,9 @@ void shveu_close(void *veu)
 	}
 }
 
-void *shveu_open(void)
+SHVEU *shveu_open(void)
 {
-	struct veu *veu;
+	SHVEU *veu;
 	int ret;
 
 	veu = calloc(1, sizeof(*veu));
@@ -207,7 +206,7 @@ err:
 
 int
 shveu_start(
-	void *veu,
+	SHVEU *pvt,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,
@@ -222,7 +221,6 @@ shveu_start(
 	int dst_fmt,
 	shveu_rotation_t rotate)
 {
-	struct veu *pvt = veu;
 	struct uio_map *ump = &pvt->uio_mmio;
 
 #ifdef DEBUG
@@ -405,10 +403,8 @@ shveu_start(
 }
 
 void
-shveu_wait(void *veu)
+shveu_wait(SHVEU *pvt)
 {
-	struct veu *pvt = veu;
-
 	uiomux_sleep(pvt->uiomux, UIOMUX_SH_VEU);
 	write_reg(&pvt->uio_mmio, 0x100, VEVTR);   /* ack int, write 0 to bit 0 */
 
@@ -421,7 +417,7 @@ shveu_wait(void *veu)
 
 int
 shveu_operation(
-	void *veu,
+	SHVEU *veu,
 	unsigned long src_py,
 	unsigned long src_pc,
 	unsigned long src_width,

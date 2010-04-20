@@ -85,16 +85,23 @@ extern "C" {
  */
 
 /**
+ * An opaque handle to the VEU.
+ */
+struct SHVEU;
+typedef struct SHVEU SHVEU;
+
+
+/**
  * Open a VEU device.
  * \retval 0 Failure, otherwise VEU handle
  */
-void *shveu_open(void);
+SHVEU *shveu_open(void);
 
 /**
  * Close a VEU device.
  * \param veu VEU handle
  */
-void shveu_close(void *veu);
+void shveu_close(SHVEU *veu);
 
 #include <shveu/veu_colorspace.h>
 
