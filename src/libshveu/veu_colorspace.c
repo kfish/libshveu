@@ -375,10 +375,12 @@ shveu_start(
 		write_reg(ump, 0x00800010, VCOFFR);
 	}
 
+	write_reg(ump, 0, VRFCR);
+	write_reg(ump, 0, VRFSR);
         if ((dst_width*dst_height) > (src_width*src_height)) {
                 set_scale(ump, 0, src_width,  dst_width, 1);
                 set_scale(ump, 1, src_height, dst_height, 1);
-        }else{
+        } else {
                 set_scale(ump, 0, src_width,  dst_width, 0);
                 set_scale(ump, 1, src_height, dst_height, 0);
         }
@@ -386,8 +388,7 @@ shveu_start(
 	if (rotate) {
 		write_reg(ump, 1, VFMCR);
 		write_reg(ump, 0, VRFCR);
-	}
-	else {
+	} else {
 		write_reg(ump, 0, VFMCR);
 	}
 
