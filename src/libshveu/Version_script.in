@@ -14,6 +14,7 @@
 		shveu_wait;
 		shveu_rescale;
 		shveu_rotate;
+		shveu_crop;
 		
         local:
                 *;

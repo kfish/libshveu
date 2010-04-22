@@ -225,8 +225,8 @@ int display_update(
 	w = w - (w % HW_ALIGN);
 	h = h - (h % HW_ALIGN);
 	ret = shveu_rescale(disp->veu,
-		py, pc,	(long) w, (long) h, (long) pitch, v4l_fmt,
-		fb_addr, 0UL, dst_w, dst_h, disp->lcd_w, V4L2_PIX_FMT_RGB565);
+		py, pc,	(long) w, (long) h, v4l_fmt,
+		fb_addr, 0UL, dst_w, dst_h, V4L2_PIX_FMT_RGB565);
 
 	if (!ret)
 		display_flip(disp);

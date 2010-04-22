@@ -292,7 +292,7 @@ static void scale(
 	unsigned long pc,
 	unsigned long w,
 	unsigned long h,
-	unsigned long x,
+	unsigned long x,	/* Centre co-ordinates */
 	unsigned long y,
 	int src_fmt)
 {
@@ -300,25 +300,62 @@ static void scale(
 	unsigned long  bb_phys = display_get_back_buff_phys(display);
 	int lcd_w = display_get_width(display);
 	int lcd_h = display_get_height(display);
-	int scaled_w = (int) (w * scale);
-	int scaled_h = (int) (h * scale);
-	int y_bpp = (src_fmt == V4L2_PIX_FMT_RGB565) ? 2 : 1;
-	int c_bpp = (src_fmt == V4L2_PIX_FMT_NV12) ? 2 : 1;
-	int offset;
-
-	scaled_w -= (scaled_w % 2);
-	scaled_h -= (scaled_h % 2);
+	int scaled_w = (int) (w * scale / 2.0);
+	int scaled_h = (int) (h * scale / 2.0);
+	int src_x1, src_y1, src_x2, src_y2;
+	int dst_x1, dst_y1, dst_x2, dst_y2;
+	float tmp;
 
 	/* Clear the back buffer */
 	draw_rect_rgb565(bb_virt, BLACK, 0, 0, lcd_w, lcd_h, lcd_w);
 
-	offset = y*w + x;
-	py += offset * y_bpp;
-	pc += offset / c_bpp;
+	src_x1 = 0;
+	src_y1 = 0;
+	src_x2 = w;
+	src_y2 = h;
+
+	dst_x1 = dst_x2 = lcd_w/2 + x;
+	dst_y1 = dst_y2 = lcd_h/2 + y;
+
+	dst_x1 -= scaled_w;
+	dst_y1 -= scaled_h;
+	dst_x2 += scaled_w;
+	dst_y2 += scaled_h;
+
+	/* Output is off screen? */
+	if ((dst_x1 > lcd_w) || (dst_x2 < 0) || (dst_y1 > lcd_h) || (dst_y2 < 0))
+		return;
+
+	/* Crop source so that the output is on the lcd */
+	if (dst_x1 < 0) {
+		tmp = (-dst_x1) / (float)scaled_w;
+		src_x1 = (w/2) * tmp;
+		dst_x1 = 0;
+	}
+	if (dst_x2 > lcd_w) {
+		tmp = (dst_x2 - lcd_w) / (float)scaled_w;
+		src_x2 = w - ((w/2) * tmp);
+		dst_x2 = lcd_w;
+	}
+
+	if (dst_y1 < 0) {
+		tmp = (-dst_y1) / (float)scaled_h;
+		src_y1 = (h/2) * tmp;
+		dst_y1 = 0;
+	}
+	if (dst_y2 > lcd_h) {
+		tmp = (dst_y2 - lcd_h) / (float)scaled_h;
+		src_y2 = h - ((h/2) * tmp);
+		dst_y2 = lcd_h;
+	}
+
+	/* Cropping */
+	shveu_crop(veu, 0, src_x1, src_y1, src_x2, src_y2);
+	shveu_crop(veu, 1, dst_x1, dst_y1, dst_x2, dst_y2);
 
 	shveu_rescale(veu,
-		py,      pc, w, h, w, src_fmt,
-		bb_phys, 0,  scaled_w, scaled_h, lcd_w, V4L2_PIX_FMT_RGB565);
+		py,      pc, w, h, src_fmt,
+		bb_phys, 0,  lcd_w, lcd_h, V4L2_PIX_FMT_RGB565);
 
 	display_flip(display);
 }
@@ -339,7 +376,7 @@ int main (int argc, char * argv[])
 	unsigned char *src_virt;
 	unsigned long src_py, src_pc;
 	int ret;
-	float scale_factor = 1.0;
+	float scale_factor=1.0;
 	int read_image = 1;
 	int x=0, y=0;
 	int key;
@@ -474,7 +511,7 @@ int main (int argc, char * argv[])
 		goto exit_err;
 	}
 
-       if ((display = display_open()) == 0) {
+	if ((display = display_open()) == 0) {
 		fprintf (stderr, "Error opening display\n");
 		goto exit_err;
 	}
@@ -531,16 +568,16 @@ int main (int argc, char * argv[])
 			y = 0;
 			break;
 		case KEY_UP:
-			if (y > 0) y -= 1;
+			y -= 1;
 			break;
 		case KEY_DOWN:
-			if (y < input_h) y += 1;
+			y += 1;
 			break;
 		case KEY_LEFT:
-			if (x > 0) x -= 1;
+			x -= 1;
 			break;
 		case KEY_RIGHT:
-			if (x < input_w) x += 1;
+			x += 1;
 			break;
 		case ' ':
 			read_image = 1;
