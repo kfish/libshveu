@@ -95,17 +95,19 @@ static void set_scale(struct uio_map *ump, int vertical,
 
 	/* calculate FRAC and MANT */
 
-	fixpoint = (4096 * (size_in - 1)) / (size_out + 1);
+	fixpoint = (4096 * (size_in - 1)) / (size_out - 1);
 	mant = fixpoint / 4096;
 	frac = fixpoint - (mant * 4096);
 
-	if (frac & 0x07) {
-		frac &= ~0x07;
+	if (sh_veu_is_veu2h(ump)) {
+		if (frac & 0x07) {
+			frac &= ~0x07;
 
-		if (size_out > size_in)
-			frac -= 8;	/* round down if scaling up */
-		else
-			frac += 8;	/* round up if scaling down */
+			if (size_out > size_in)
+				frac -= 8;	/* round down if scaling up */
+			else
+				frac += 8;	/* round up if scaling down */
+		}
 	}
 
 	/* Fix calculation for 1 to 1 scaling */
