@@ -187,9 +187,9 @@ int display_update(
 	int pitch,
 	int v4l_fmt)
 {
-	unsigned long fb_addr;
 	float scale, aspect_x, aspect_y;
 	int dst_w, dst_h;
+	int x1, y1, x2, y2;
 	int ret;
 
 	if (disp->fullscreen) {
@@ -202,31 +202,25 @@ int display_update(
 			scale = aspect_x;
 		}
 
-		dst_w = (long) (w * scale);
-		dst_h = (long) (h * scale);
-	} else {
-		dst_w = disp->out_w;
-		dst_h = disp->out_h;
-	}
-	/* Observe hardware alignment */
-	dst_w = dst_w - (dst_w % HW_ALIGN);
-	dst_h = dst_h - (dst_h % HW_ALIGN);
+		dst_w = (int) (w * scale);
+		dst_h = (int) (h * scale);
 
-	if (disp->fullscreen) {
-		/* Center - Assuming 2 bytes per pixel */
-		fb_addr = disp->back_buf_phys
-			+ (disp->lcd_w - dst_w)
-			+ (disp->lcd_h - dst_h) * disp->lcd_w;
+		x1 = disp->lcd_w/2 - dst_w/2;
+		y1 = disp->lcd_h/2 - dst_h/2;
+		x2 = x1 + dst_w;
+		y2 = y1 + dst_h;
 	} else {
-		fb_addr = disp->back_buf_phys
-			+ (disp->out_x + (disp->out_y * disp->lcd_w)) * 2;
+		x1 = disp->out_x;
+		y1 = disp->out_y;
+		x2 = x1 + disp->out_w;
+		y2 = y1 + disp->out_h;
 	}
 
-	w = w - (w % HW_ALIGN);
-	h = h - (h % HW_ALIGN);
+	shveu_crop(disp->veu, 1, x1, y1, x2, y2);
+
 	ret = shveu_rescale(disp->veu,
 		py, pc,	(long) w, (long) h, v4l_fmt,
-		fb_addr, 0UL, dst_w, dst_h, V4L2_PIX_FMT_RGB565);
+		disp->back_buf_phys, 0, disp->lcd_w, disp->lcd_h, V4L2_PIX_FMT_RGB565);
 
 	if (!ret)
 		display_flip(disp);
