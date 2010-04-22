@@ -93,6 +93,9 @@ static int set_size (char * arg, int * w, int * h)
 		} else if (!strncasecmp (arg, "vga", 3)) {
 			*w = 640;
 			*h = 480;
+		} else if (!strncasecmp (arg, "720p", 4)) {
+			*w = 1280;
+			*h = 720;
 		} else {
 			return -1;
 		}
@@ -115,6 +118,8 @@ static const char * show_size (int w, int h)
 		return "QVGA";
 	} else if (w == 640 && h == 480) {
 		return "VGA";
+	} else if (w == 1280 && h == 720) {
+		return "720p";
 	}
 
 	return "";
