@@ -3,6 +3,9 @@
  *
  */
 
+#ifndef  DISPLAY_H
+#define  DISPLAY_H
+
 #include <linux/videodev2.h>	/* For pixel formats */
 
 /**
@@ -96,3 +99,4 @@ int display_update(
 	int v4l_fmt
 );
 
+#endif
