@@ -169,7 +169,7 @@ static int sh_veu_is_veu3f(void)
 }
 
 static void set_scale(struct uio_map *ump, int vertical,
-		      int size_in, int size_out, int zoom)
+		      int size_in, int size_out)
 {
 	unsigned long fixpoint, mant, frac, value, vb;
 
@@ -226,7 +226,7 @@ static void set_scale(struct uio_map *ump, int vertical,
 #ifdef KERNEL2_6_33
 	if (sh_veu_is_veu3f()) {
 #endif
-	    if (zoom)
+	    if (size_out >= size_in)
 	        vb = 64;
 	    else {
 	        if ((mant >= 8) && (mant < 16))
@@ -244,7 +244,7 @@ static void set_scale(struct uio_map *ump, int vertical,
 	    value = read_reg(ump, VRPBR);
 	    if (vertical) {
 	        value &= ~0xffff0000;
-	        value |= vb << 16;
+		value |= vb << 16;
 	    } else {
 	        value &= ~0xffff;
 	        value |= vb;
@@ -480,13 +480,8 @@ shveu_start(
 		write_reg(ump, 0x00800010, VCOFFR);
 	}
 
-        if ((dst_width*dst_height) > (src_width*src_height)) {
-                set_scale(ump, 0, src_width,  dst_width, 1);
-                set_scale(ump, 1, src_height, dst_height, 1);
-        }else{
-                set_scale(ump, 0, src_width,  dst_width, 0);
-                set_scale(ump, 1, src_height, dst_height, 0);
-        }
+        set_scale(ump, 0, src_width,  dst_width);
+        set_scale(ump, 1, src_height, dst_height);
 
 	if (rotate) {
 		write_reg(ump, 1, VFMCR);
