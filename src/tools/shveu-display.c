@@ -368,9 +368,9 @@ static void scale(
 
 int main (int argc, char * argv[])
 {
-	UIOMux *uiomux;
-	SHVEU *veu;
-	DISPLAY *display;
+	UIOMux *uiomux = NULL;
+	SHVEU *veu = NULL;
+	DISPLAY *display = NULL;
 	char * infilename = NULL;
 	FILE * infile = NULL;
 	size_t nread;
@@ -508,10 +508,12 @@ int main (int argc, char * argv[])
 		}
 	}
 
+	if ((uiomux = uiomux_open()) == 0) {
+		fprintf (stderr, "Error opening UIOmux\n");
+		goto exit_err;
+	}
 
-	uiomux = uiomux_open ();
-
-	if ((veu = shveu_open ()) == 0) {
+	if ((veu = shveu_open()) == 0) {
 		fprintf (stderr, "Error opening VEU\n");
 		goto exit_err;
 	}
@@ -524,6 +526,10 @@ int main (int argc, char * argv[])
 
 	/* Set up memory buffers */
 	src_virt = uiomux_malloc (uiomux, UIOMUX_SH_VEU, input_size, 32);
+	if (!src_virt) {
+		perror("uiomux_malloc");
+		goto exit_err;
+	}
 	src_py = uiomux_virt_to_phys (uiomux, UIOMUX_SH_VEU, src_virt);
 	src_pc = src_py + (input_w * input_h);
 
@@ -609,5 +615,8 @@ exit_ok:
 	exit (0);
 
 exit_err:
+	if (display) display_close(display);
+	if (veu)     shveu_close(veu);
+	if (uiomux)  uiomux_close (uiomux);
 	exit (1);
 }
