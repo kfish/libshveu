@@ -41,7 +41,7 @@ usage (const char * progname)
 	printf ("\nInput options\n");
 	printf ("  -c, --input-colorspace (RGB565, NV12, YCbCr420, YCbCr422)\n");
 	printf ("                         Specify input colorspace\n");
-	printf ("  -s, --input-size       Set the input image size (qcif, cif, qvga, vga)\n");
+	printf ("  -s, --input-size       Set the input image size (qcif, cif, qvga, vga, d1, 720p)\n");
 	printf ("\nControl keys\n");
 	printf ("  +/-                    Zoom in/out\n");
 	printf ("  Cursor keys            Pan\n");
@@ -97,6 +97,9 @@ static int set_size (char * arg, int * w, int * h)
 		} else if (!strncasecmp (arg, "vga", 3)) {
 			*w = 640;
 			*h = 480;
+                } else if (!strncasecmp (arg, "d1", 2)) {
+                        *w = 720;
+                        *h = 480;
 		} else if (!strncasecmp (arg, "720p", 4)) {
 			*w = 1280;
 			*h = 720;
@@ -122,6 +125,8 @@ static const char * show_size (int w, int h)
 		return "QVGA";
 	} else if (w == 640 && h == 480) {
 		return "VGA";
+	} else if (w == 720 && h == 480) {
+		return "D1";
 	} else if (w == 1280 && h == 720) {
 		return "720p";
 	}
@@ -265,6 +270,10 @@ static int guess_size (char * filename, int colorspace, int * w, int * h)
 			*w = 320; *h = 240;
 		} else if (size == 640*480*n/d) {
 			*w = 640; *h = 480;
+		} else if (size == 720*480*n/d) {
+			*w = 720; *h = 480;
+		} else if (size == 1280*720*n/d) {
+			*w = 1280; *h = 720;
 		} else {
 			return -1;
 		}
