@@ -163,6 +163,22 @@ if test "x$HAVE_GETOPT_LONG" = xyes ; then
   AC_DEFINE(HAVE_GETOPT_LONG, [], [Define to 1 if you have the 'getopt_long' function])
 fi
 
+HAVE_NCURSES=no
+AC_CHECK_LIB(ncurses, initscr, HAVE_NCURSES="maybe", HAVE_NCURSES=no)
+if test "x$HAVE_NCURSES" = "xmaybe" ; then
+  AC_CHECK_HEADER([ncurses.h], HAVE_NCURSES="yes")
+  if test "x$HAVE_NCURSES" = "xmaybe" ; then
+    AC_CHECK_HEADER([ncurses/ncurses.h], HAVE_NCURSES="yes")
+    if test "x$HAVE_NCURSES" = "xyes" ; then
+      AC_DEFINE(HAVE_NCURSES_SUBDIR, [], [Define to 1 if ncurses.h is inside an <ncurses/> subdir])
+    fi
+  fi
+fi
+if test "x$HAVE_NCURSES" = "xyes" ; then
+  ncurses_programs=shveu-display
+fi
+AM_CONDITIONAL(HAVE_NCURSES, [test "x$HAVE_NCURSES" = "xyes"])
+
 dnl Overall configuration success flag
 shveu_config_ok=yes
 
@@ -295,6 +311,10 @@ AC_MSG_RESULT([
 
     Experimental code: ........... ${ac_enable_experimental}
     UIOMux support: .............. ${UIOMUX_SUPPORT}
+
+  Tools:
+
+    shveu-convert ${ncurses_programs}
 
   Installation paths:
 

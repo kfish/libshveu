@@ -15,7 +15,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef HAVE_NCURSES_SUBDIR
 #include <ncurses/ncurses.h>
+#else
+#include <ncurses.h>
+#endif
 #include <uiomux/uiomux.h>
 #include "shveu/shveu.h"
 #include "display.h"
